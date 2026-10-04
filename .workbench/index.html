@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📚 小说创作工作台</title>
+  <style>
+    /* ── 重置 & 变量 ──────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --sidebar-bg: #161b22;
+      --panel-bg: #1c2128;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #7d8590;
+      --accent: #e85d25;
+      --accent-light: rgba(232,93,37,0.12);
+      --green: #3fb950;
+      --yellow: #d29922;
+      --blue: #58a6ff;
+      --red: #f85149;
+      --radius: 6px;
+      --sidebar-w: 240px;
+      --git-w: 300px;
+      --toolbar-h: 44px;
+      --font-mono: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+      --font-ui: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+    }
+
+    html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font-ui); font-size: 14px; }
+
+    /* ── 布局 ────────────────────────────── */
+    #app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* 左侧文件树 */
+    #sidebar {
+      width: var(--sidebar-w);
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow: hidden; flex-shrink: 0;
+    }
+    #sidebar-header {
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    #sidebar-header .logo { font-size: 18px; }
+    #sidebar-header .title { font-weight: 600; font-size: 13px; color: var(--text); }
+    #sidebar-header .branch-badge {
+      margin-left: auto; background: var(--accent-light); color: var(--accent);
+      border: 1px solid var(--accent); border-radius: 20px;
+      padding: 1px 8px; font-size: 11px; font-weight: 500;
+    }
+
+    #file-tree { flex: 1; overflow-y: auto; padding: 6px 0; }
+    #file-tree::-webkit-scrollbar { width: 4px; }
+    #file-tree::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .tree-item {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 8px 4px 0; cursor: pointer; user-select: none;
+      border-radius: var(--radius); margin: 1px 4px;
+      transition: background 0.1s;
+    }
+    .tree-item:hover { background: rgba(255,255,255,0.05); }
+    .tree-item.active { background: var(--accent-light); }
+    .tree-item .icon { font-size: 13px; flex-shrink: 0; }
+    .tree-item .name { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .tree-item .words { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+    .tree-dir > .tree-item .name { color: var(--muted); font-weight: 500; }
+    .tree-dir-children { display: none; }
+    .tree-dir.open > .tree-dir-children { display: block; }
+
+    #sidebar-actions {
+      padding: 10px 8px;
+      border-top: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 6px;
+    }
+
+    /* 主编辑区 */
+    #main {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+    }
+
+    #toolbar {
+      height: var(--toolbar-h);
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 16px; gap: 10px;
+      flex-shrink: 0;
+    }
+    #file-path { font-size: 12px; color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #save-status { font-size: 12px; padding: 2px 10px; border-radius: 20px; transition: all 0.3s; }
+    #save-status.saved { color: var(--green); background: rgba(63,185,80,0.1); }
+    #save-status.unsaved { color: var(--yellow); background: rgba(210,153,34,0.1); }
+    #save-status.saving { color: var(--blue); background: rgba(88,166,255,0.1); }
+
+    #editor-container { flex: 1; display: flex; overflow: hidden; }
+
+    #editor-pane, #preview-pane {
+      flex: 1; overflow: hidden; display: flex; flex-direction: column;
+    }
+
+    #editor {
+      flex: 1; resize: none; outline: none;
+      background: var(--bg); color: var(--text);
+      border: none; padding: 24px 32px;
+      font-family: var(--font-mono); font-size: 15px; line-height: 1.8;
+      tab-size: 2;
+    }
+    #editor::placeholder { color: var(--muted); }
+    #editor::-webkit-scrollbar { width: 6px; }
+    #editor::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    #preview-pane {
+      border-left: 1px solid var(--border);
+      background: var(--panel-bg);
+    }
+    #preview-header {
+      padding: 8px 16px; border-bottom: 1px solid var(--border);
+      font-size: 12px; color: var(--muted); font-weight: 500;
+      display: flex; align-items: center; gap: 6px;
+    }
+    #preview {
+      flex: 1; overflow-y: auto; padding: 24px 32px;
+      line-height: 1.8;
+    }
+    #preview::-webkit-scrollbar { width: 6px; }
+    #preview::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Markdown 预览样式 */
+    #preview h1, #preview h2, #preview h3 { margin: 16px 0 8px; line-height: 1.4; }
+    #preview h1 { font-size: 20px; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    #preview h2 { font-size: 17px; color: var(--text); }
+    #preview h3 { font-size: 15px; color: var(--blue); }
+    #preview p { margin: 8px 0; }
+    #preview table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13px; }
+    #preview th, #preview td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+    #preview th { background: var(--panel-bg); color: var(--muted); font-weight: 500; }
+    #preview code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 13px; }
+    #preview pre { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin: 10px 0; overflow-x: auto; }
+    #preview pre code { background: none; padding: 0; }
+    #preview blockquote { border-left: 3px solid var(--accent); padding-left: 12px; color: var(--muted); margin: 8px 0; }
+    #preview ul, #preview ol { padding-left: 20px; margin: 6px 0; }
+    #preview li { margin: 3px 0; }
+    #preview a { color: var(--blue); text-decoration: none; }
+    #preview hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    #preview strong { color: var(--text); font-weight: 600; }
+
+    /* 右侧 Git 面板 */
+    #git-panel {
+      width: var(--git-w);
+      background: var(--sidebar-bg);
+      border-left: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow: hidden; flex-shrink: 0;
+    }
+    #git-panel-header {
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+      font-weight: 600; font-size: 13px;
+    }
+
+    .panel-section { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    .panel-section-title { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+
+    #commit-msg {
+      width: 100%; background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 8px 10px; font-family: var(--font-ui); font-size: 13px;
+      resize: vertical; min-height: 60px; outline: none;
+      transition: border-color 0.2s;
+    }
+    #commit-msg:focus { border-color: var(--accent); }
+    #commit-msg::placeholder { color: var(--muted); }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 7px 14px; border-radius: var(--radius); border: 1px solid transparent;
+      font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font-ui);
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-primary:hover:not(:disabled) { background: #d15520; }
+    .btn-secondary { background: transparent; color: var(--text); border-color: var(--border); }
+    .btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.06); }
+    .btn-danger { background: transparent; color: var(--red); border-color: var(--red); }
+    .btn-danger:hover:not(:disabled) { background: rgba(248,81,73,0.1); }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn-full { width: 100%; }
+
+    .btn-row { display: flex; gap: 6px; }
+
+    .changed-file {
+      display: flex; align-items: center; gap: 6px;
+      padding: 3px 0; font-size: 12px; overflow: hidden;
+    }
+    .changed-file .badge {
+      flex-shrink: 0; width: 16px; height: 16px; border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700;
+    }
+    .badge-M { background: rgba(210,153,34,0.2); color: var(--yellow); }
+    .badge-A { background: rgba(63,185,80,0.2); color: var(--green); }
+    .badge-D { background: rgba(248,81,73,0.2); color: var(--red); }
+    .badge-? { background: rgba(88,166,255,0.15); color: var(--blue); }
+    .changed-file .fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+
+    .commit-item {
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .commit-item:last-child { border-bottom: none; }
+    .commit-hash { color: var(--blue); font-family: var(--font-mono); font-size: 11px; }
+    .commit-msg-text { color: var(--text); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* 统计看板 */
+    #stats-panel {
+      padding: 12px 14px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .stat-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 12px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .stat-label { font-size: 12px; color: var(--muted); }
+    .stat-value { font-size: 18px; font-weight: 700; color: var(--accent); font-family: var(--font-mono); }
+    .stat-value.green { color: var(--green); }
+
+    /* Toast 提示 */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--panel-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 16px;
+      font-size: 13px; z-index: 9999;
+      transform: translateY(100px); opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      max-width: 320px; display: flex; align-items: center; gap: 8px;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.success { border-color: var(--green); }
+    #toast.error { border-color: var(--red); }
+    #toast.info { border-color: var(--blue); }
+
+    /* 欢迎屏 */
+    #welcome {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: var(--muted); gap: 12px;
+    }
+    #welcome .emoji { font-size: 48px; }
+    #welcome h2 { font-size: 18px; color: var(--text); }
+    #welcome p { font-size: 13px; text-align: center; line-height: 1.6; }
+
+    /* 新建文件对话框 */
+    #modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      display: none; align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+    #modal-overlay.show { display: flex; }
+    #modal {
+      background: var(--panel-bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 20px 24px; width: 420px;
+    }
+    #modal h3 { margin-bottom: 14px; font-size: 15px; }
+    .form-group { margin-bottom: 12px; }
+    .form-label { font-size: 12px; color: var(--muted); margin-bottom: 5px; display: block; }
+    .form-input {
+      width: 100%; background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 7px 10px; font-size: 13px; outline: none; font-family: var(--font-mono);
+    }
+    .form-input:focus { border-color: var(--accent); }
+
+    /* 进度条 */
+    .progress-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 6px; }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.6s ease; }
+
+    /* 分隔线拖拽 */
+    .divider {
+      width: 4px; background: transparent; cursor: col-resize; flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .divider:hover { background: var(--accent); }
+
+    /* Loading 遮罩 */
+    .loading { opacity: 0.5; pointer-events: none; }
+
+    /* 滚动到 git 历史 */
+    #git-scroll { flex: 1; overflow-y: auto; }
+    #git-scroll::-webkit-scrollbar { width: 4px; }
+    #git-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <!-- 左侧文件树 -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <span class="logo">📚</span>
+      <span class="title">小说工作台</span>
+      <span class="branch-badge" id="branch-name">main</span>
+    </div>
+    <div id="file-tree">
+      <div style="padding:20px;color:var(--muted);font-size:13px;text-align:center;">加载中…</div>
+    </div>
+    <div id="sidebar-actions">
+      <button class="btn btn-secondary btn-sm btn-full" onclick="showNewFileModal()">＋ 新建文件</button>
+      <button class="btn btn-secondary btn-sm btn-full" onclick="refreshAll()">↻ 刷新</button>
+    </div>
+  </div>
+
+  <!-- 主编辑区 -->
+  <div id="main">
+    <div id="toolbar">
+      <span id="file-path" style="color:var(--muted)">← 从左侧选择文件开始写作</span>
+      <span id="word-count" style="font-size:12px;color:var(--muted)"></span>
+      <span id="save-status" class="saved" style="display:none">● 已保存</span>
+      <button class="btn btn-secondary btn-sm" onclick="saveFile()" id="save-btn" style="display:none">保存</button>
+      <button class="btn btn-secondary btn-sm" onclick="togglePreview()" id="preview-btn" style="display:none">预览</button>
+    </div>
+    <div id="editor-container">
+      <div id="welcome">
+        <div class="emoji">✍️</div>
+        <h2>开始你的创作</h2>
+        <p>从左侧文件树选择一个文件<br>或点击「新建文件」开始</p>
+      </div>
+      <div id="editor-pane" style="display:none">
+        <textarea id="editor" placeholder="开始写作…" spellcheck="false"></textarea>
+      </div>
+      <div id="preview-pane" style="display:none">
+        <div id="preview-header">👁 预览</div>
+        <div id="preview"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右侧 Git + 统计面板 -->
+  <div id="git-panel">
+    <div id="git-panel-header">
+      <span>🔀</span>
+      <span>版本 & 进度</span>
+    </div>
+    <div id="git-scroll">
+      <!-- 统计看板 -->
+      <div class="panel-section">
+        <div class="panel-section-title">📊 写作进度</div>
+        <div id="stats-panel">
+          <div class="stat-card">
+            <span class="stat-label">📝 总字数</span>
+            <span class="stat-value" id="stat-words">-</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">📖 已写章节</span>
+            <span class="stat-value green" id="stat-chapters">-</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted)">目标：100万字</div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="stat-progress" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Commit -->
+      <div class="panel-section">
+        <div class="panel-section-title">💬 提交记录</div>
+        <textarea id="commit-msg" placeholder="feat: 完成第X章
+update: 修改大纲
+note: 添加人物设定"></textarea>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="doCommit(false)">
+            ✓ Commit
+          </button>
+          <button class="btn btn-secondary btn-sm" style="flex:1" onclick="doCommit(true)">
+            ↑ Commit+Push
+          </button>
+        </div>
+      </div>
+
+      <!-- 变更文件 -->
+      <div class="panel-section">
+        <div class="panel-section-title">📁 变更文件 <span id="changed-count" style="color:var(--accent)"></span></div>
+        <div id="changed-files">
+          <div style="color:var(--muted);font-size:12px">无变更</div>
+        </div>
+      </div>
+
+      <!-- Push单独 -->
+      <div class="panel-section">
+        <button class="btn btn-secondary btn-sm btn-full" onclick="doPush()">⬆ 单独 Push 到 GitHub</button>
+        <div style="margin-top:6px;font-size:11px;color:var(--muted)" id="remote-url"></div>
+      </div>
+
+      <!-- Commit 历史 -->
+      <div class="panel-section">
+        <div class="panel-section-title">🕒 提交历史</div>
+        <div id="commit-history">
+          <div style="color:var(--muted);font-size:12px">加载中…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- 新建文件 Modal -->
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div id="modal">
+    <h3>📄 新建文件</h3>
+    <div class="form-group">
+      <label class="form-label">路径（相对项目根目录）</label>
+      <input class="form-input" id="new-file-path" placeholder="正文/卷一/第002章.md" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">快速模板</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+        <button class="btn btn-secondary btn-sm" onclick="useTemplate('chapter')">📖 章节</button>
+        <button class="btn btn-secondary btn-sm" onclick="useTemplate('character')">👤 人物</button>
+        <button class="btn btn-secondary btn-sm" onclick="useTemplate('outline')">📋 大纲</button>
+        <button class="btn btn-secondary btn-sm" onclick="useTemplate('note')">💡 笔记</button>
+      </div>
+    </div>
+    <div class="btn-row" style="margin-top:16px;justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="createNewFile()">创建</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:8765/api';
+let currentPath = null;
+let saveTimer = null;
+let previewVisible = false;
+let isDirty = false;
+
+// ── 工具函数 ──────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = { success: '✅ ', error: '❌ ', info: 'ℹ️ ' }[type] + msg;
+  el.className = `show ${type}`;
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.className = '', 3000);
+}
+
+async function api(method, endpoint, body) {
+  try {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(API + endpoint, opts);
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: r.statusText }));
+      throw new Error(err.detail || r.statusText);
+    }
+    return r.json();
+  } catch (e) {
+    throw e;
+  }
+}
+
+// ── 文件树 ──────────────────────────────────────────
+const FOLDER_ICONS = {
+  '市场调研': '🔍', '立项': '🎯', '世界观': '🌍', '人物': '👤',
+  '大纲': '📋', '正文': '📖', '笔记': '💡', '进度': '📊',
+  '.workbench': '⚙️',
+};
+const FILE_ICONS = {
+  '.md': '📄',
+};
+
+function getIcon(node) {
+  if (node.type === 'dir') return FOLDER_ICONS[node.name] || '📁';
+  const ext = node.name.slice(node.name.lastIndexOf('.'));
+  return FILE_ICONS[ext] || '📄';
+}
+
+function formatWords(n) {
+  if (!n) return '';
+  if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
+  return n + '字';
+}
+
+function buildTreeHTML(node, indent = 0) {
+  if (!node) return '';
+  const pad = indent * 14;
+
+  if (node.type === 'file') {
+    return `<div class="tree-item" data-path="${node.path}" onclick="openFile('${node.path.replace(/'/g, "\\'")}')" style="padding-left:${8 + pad}px">
+      <span class="icon">${getIcon(node)}</span>
+      <span class="name">${node.name}</span>
+      ${node.words ? `<span class="words">${formatWords(node.words)}</span>` : ''}
+    </div>`;
+  }
+
+  if (node.type === 'dir') {
+    const isRoot = indent === 0;
+    const childrenHTML = (node.children || []).map(c => buildTreeHTML(c, indent + 1)).join('');
+    if (isRoot) return childrenHTML;
+    return `<div class="tree-dir open">
+      <div class="tree-item" style="padding-left:${8 + pad}px" onclick="toggleDir(this.parentElement)">
+        <span class="icon">${getIcon(node)}</span>
+        <span class="name">${node.name}</span>
+      </div>
+      <div class="tree-dir-children">${childrenHTML}</div>
+    </div>`;
+  }
+  return '';
+}
+
+function toggleDir(el) { el.classList.toggle('open'); }
+
+async function loadTree() {
+  try {
+    const tree = await api('GET', '/tree');
+    document.getElementById('file-tree').innerHTML = buildTreeHTML(tree, 0);
+    if (currentPath) {
+      document.querySelectorAll(`[data-path="${currentPath}"]`).forEach(el => el.classList.add('active'));
+    }
+  } catch (e) {
+    document.getElementById('file-tree').innerHTML = `<div style="padding:16px;color:var(--red);font-size:12px">加载失败：${e.message}</div>`;
+  }
+}
+
+// ── 文件编辑 ──────────────────────────────────────────
+async function openFile(path) {
+  if (isDirty && currentPath) {
+    if (!confirm('当前文件有未保存的更改，是否放弃？')) return;
+  }
+  currentPath = path;
+  isDirty = false;
+
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('editor-pane').style.display = 'flex';
+  document.getElementById('save-btn').style.display = '';
+  document.getElementById('preview-btn').style.display = '';
+  document.getElementById('save-status').style.display = '';
+
+  document.querySelectorAll('.tree-item.active').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll(`[data-path="${path}"]`).forEach(el => el.classList.add('active'));
+
+  document.getElementById('file-path').textContent = path;
+  document.getElementById('editor').value = '加载中…';
+  setSaveStatus('saved');
+
+  try {
+    const data = await api('GET', `/file?path=${encodeURIComponent(path)}`);
+    document.getElementById('editor').value = data.content;
+    updateWordCount();
+    if (previewVisible) renderPreview();
+  } catch (e) {
+    toast('读取文件失败：' + e.message, 'error');
+  }
+}
+
+function setSaveStatus(state) {
+  const el = document.getElementById('save-status');
+  el.className = state;
+  el.textContent = { saved: '● 已保存', unsaved: '● 未保存', saving: '● 保存中…' }[state];
+}
+
+document.getElementById('editor').addEventListener('input', () => {
+  isDirty = true;
+  setSaveStatus('unsaved');
+  updateWordCount();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveFile, 1500); // 1.5s 自动保存
+  if (previewVisible) renderPreview();
+});
+
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+    e.preventDefault();
+    saveFile();
+  }
+});
+
+async function saveFile() {
+  if (!currentPath) return;
+  setSaveStatus('saving');
+  try {
+    await api('POST', '/file', { path: currentPath, content: document.getElementById('editor').value });
+    isDirty = false;
+    setSaveStatus('saved');
+  } catch (e) {
+    toast('保存失败：' + e.message, 'error');
+    setSaveStatus('unsaved');
+  }
+}
+
+function updateWordCount() {
+  const text = document.getElementById('editor').value;
+  const cn = (text.match(/[\u4e00-\u9fff]/g) || []).length;
+  const all = text.trim().split(/\s+/).filter(Boolean).length;
+  document.getElementById('word-count').textContent = `${cn} 字`;
+}
+
+// ── 预览 ──────────────────────────────────────────
+function togglePreview() {
+  previewVisible = !previewVisible;
+  document.getElementById('preview-pane').style.display = previewVisible ? 'flex' : 'none';
+  document.getElementById('preview-btn').textContent = previewVisible ? '关闭预览' : '预览';
+  if (previewVisible) renderPreview();
+}
+
+function renderPreview() {
+  const md = document.getElementById('editor').value;
+  document.getElementById('preview').innerHTML = simpleMarkdown(md);
+}
+
+function simpleMarkdown(md) {
+  return md
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^---$/gm, '<hr>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
+    .replace(/^\- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>')
+    .replace(/\|(.+)\|/g, (m) => {
+      const cells = m.split('|').filter((c,i,a) => i > 0 && i < a.length-1);
+      return '<tr>' + cells.map(c => `<td>${c.trim()}</td>`).join('') + '</tr>';
+    })
+    .replace(/(<tr>.*<\/tr>)/s, '<table>$1</table>')
+    .replace(/\n{2,}/g, '</p><p>')
+    .replace(/^(?!<[a-z])(.+)$/gm, (m) => m.startsWith('<') ? m : `<p>${m}</p>`);
+}
+
+// ── Git 操作 ──────────────────────────────────────────
+async function loadGitStatus() {
+  try {
+    const data = await api('GET', '/git/status');
+    document.getElementById('branch-name').textContent = data.branch || 'main';
+    document.getElementById('remote-url').textContent = data.remote || '';
+
+    // 变更文件
+    const changed = document.getElementById('changed-files');
+    document.getElementById('changed-count').textContent = data.changed.length ? `(${data.changed.length})` : '';
+    if (data.changed.length === 0) {
+      changed.innerHTML = '<div style="color:var(--muted);font-size:12px">✓ 工作区干净</div>';
+    } else {
+      changed.innerHTML = data.changed.map(f => {
+        const s = f.status || '?';
+        const badgeClass = { M: 'badge-M', A: 'badge-A', D: 'badge-D' }[s] || 'badge-?';
+        const fname = f.file.split('/').pop();
+        return `<div class="changed-file" title="${f.file}">
+          <span class="badge ${badgeClass}">${s}</span>
+          <span class="fname">${fname}</span>
+        </div>`;
+      }).join('');
+    }
+
+    // 提交历史
+    const history = document.getElementById('commit-history');
+    if (data.commits.length === 0) {
+      history.innerHTML = '<div style="color:var(--muted);font-size:12px">暂无提交</div>';
+    } else {
+      history.innerHTML = data.commits.map(c => `
+        <div class="commit-item">
+          <div class="commit-hash">${c.hash}</div>
+          <div class="commit-msg-text">${c.message}</div>
+        </div>`).join('');
+    }
+  } catch (e) {
+    console.warn('Git 状态获取失败', e);
+  }
+}
+
+async function doCommit(push) {
+  const msg = document.getElementById('commit-msg').value.trim();
+  if (!msg) { toast('请输入提交信息', 'error'); return; }
+
+  const btn = push ? event.target : document.querySelector('[onclick="doCommit(false)"]');
+  btn.disabled = true;
+  btn.textContent = push ? '推送中…' : '提交中…';
+
+  try {
+    const data = await api('POST', '/git/commit', { message: msg, push });
+    toast(push ? `✓ Commit + Push 成功` : `✓ Commit 成功`, 'success');
+    document.getElementById('commit-msg').value = '';
+    await loadGitStatus();
+    await loadTree(); // 刷新字数
+  } catch (e) {
+    toast('失败：' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = push ? '↑ Commit+Push' : '✓ Commit';
+  }
+}
+
+async function doPush() {
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = '推送中…';
+  try {
+    const data = await api('POST', '/git/push');
+    toast(data.success ? '✓ Push 成功' : 'Push 失败：' + data.output, data.success ? 'success' : 'error');
+    await loadGitStatus();
+  } catch (e) {
+    toast('Push 失败：' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '⬆ 单独 Push 到 GitHub';
+  }
+}
+
+// ── 统计 ──────────────────────────────────────────
+async function loadStats() {
+  try {
+    const data = await api('GET', '/stats');
+    document.getElementById('stat-words').textContent = data.total_words >= 10000
+      ? (data.total_words / 10000).toFixed(1) + 'w'
+      : data.total_words.toString();
+    document.getElementById('stat-chapters').textContent = data.chapters;
+    const progress = Math.min(100, (data.total_words / 1000000) * 100).toFixed(2);
+    document.getElementById('stat-progress').style.width = progress + '%';
+  } catch (e) {
+    console.warn('统计失败', e);
+  }
+}
+
+// ── 新建文件 ──────────────────────────────────────────
+const TEMPLATES = {
+  chapter: (path) => {
+    const name = path.split('/').pop().replace('.md', '');
+    return `# ${name}\n\n> **卷**：卷一\n> **字数**：0\n> **状态**：🔄 草稿\n\n---\n\n`;
+  },
+  character: (path) => {
+    const name = path.split('/').pop().replace('.md', '');
+    return `# 👤 ${name}\n\n## 基本信息\n\n| 项目 | 内容 |\n|------|------|\n| 姓名 | |\n| 年龄 | |\n| 外貌 | |\n\n## 性格特征\n\n## 核心动机\n\n`;
+  },
+  outline: (path) => {
+    const name = path.split('/').pop().replace('.md', '');
+    return `# 📋 ${name}\n\n## 核心矛盾\n\n## 章节细纲\n\n| 章节 | 主要事件 | 爽点 | 结尾钩子 |\n|------|---------|------|--------|\n| | | | |\n\n`;
+  },
+  note: (path) => `# 💡 笔记\n\n${new Date().toLocaleDateString('zh-CN')}\n\n---\n\n`,
+};
+
+function showNewFileModal() {
+  document.getElementById('modal-overlay').classList.add('show');
+  document.getElementById('new-file-path').focus();
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal-overlay')) {
+    document.getElementById('modal-overlay').classList.remove('show');
+  }
+}
+
+function useTemplate(type) {
+  const path = document.getElementById('new-file-path').value || '新文件.md';
+  document.getElementById('new-file-path').dataset.template = type;
+  if (!document.getElementById('new-file-path').value) {
+    const suggestions = { chapter: '正文/卷一/第002章.md', character: '人物/新人物.md', outline: '大纲/新大纲.md', note: '笔记/新笔记.md' };
+    document.getElementById('new-file-path').value = suggestions[type] || '';
+  }
+  toast(`已选择「${type}」模板`, 'info');
+}
+
+async function createNewFile() {
+  const path = document.getElementById('new-file-path').value.trim();
+  if (!path) { toast('请输入文件路径', 'error'); return; }
+  const tmplKey = document.getElementById('new-file-path').dataset.template;
+  const content = tmplKey && TEMPLATES[tmplKey] ? TEMPLATES[tmplKey](path) : '';
+  try {
+    await api('POST', '/file/new', { path, content });
+    toast('✓ 文件已创建', 'success');
+    closeModal();
+    await loadTree();
+    openFile(path);
+  } catch (e) {
+    toast('创建失败：' + e.message, 'error');
+  }
+}
+
+document.getElementById('new-file-path').addEventListener('keydown', e => {
+  if (e.key === 'Enter') createNewFile();
+  if (e.key === 'Escape') closeModal();
+});
+
+// ── 初始化 ──────────────────────────────────────────
+async function refreshAll() {
+  await Promise.all([loadTree(), loadGitStatus(), loadStats()]);
+}
+
+refreshAll();
+// 每30秒自动刷新 git 状态
+setInterval(loadGitStatus, 30000);
+setInterval(loadStats, 60000);
+</script>
+</body>
+</html>
