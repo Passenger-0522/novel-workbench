@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# 编辑器临时文件
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# 私人草稿（不想上传的临时内容）
+drafts/private/
+*.private.md
+
+# 备份文件
+*.bak
