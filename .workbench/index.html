@@ -1,805 +1,1139 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>📚 小说创作工作台</title>
-  <style>
-    /* ── 重置 & 变量 ──────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<title>📚 小说创作工作台</title>
+<style>
+/* ── RESET & VARS ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--sb:#161b22;--card:#1c2128;--border:#30363d;
+  --text:#e6edf3;--muted:#7d8590;--ph:#484f58;
+  --accent:#e85d25;--blue:#58a6ff;--green:#3fb950;
+  --purple:#bc8cff;--yellow:#d29922;--red:#f85149;
+  --r:6px;--nav:200px;
+  --font:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;
+  --mono:"SF Mono","Fira Code","Cascadia Code",monospace;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px}
 
-    :root {
-      --bg: #0f1117;
-      --sidebar-bg: #161b22;
-      --panel-bg: #1c2128;
-      --border: #30363d;
-      --text: #e6edf3;
-      --muted: #7d8590;
-      --accent: #e85d25;
-      --accent-light: rgba(232,93,37,0.12);
-      --green: #3fb950;
-      --yellow: #d29922;
-      --blue: #58a6ff;
-      --red: #f85149;
-      --radius: 6px;
-      --sidebar-w: 240px;
-      --git-w: 300px;
-      --toolbar-h: 44px;
-      --font-mono: "SF Mono", "Fira Code", "Cascadia Code", monospace;
-      --font-ui: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
-    }
+/* ── LAYOUT ── */
+#app{display:flex;height:100vh}
 
-    html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font-ui); font-size: 14px; }
+/* ── SIDENAV ── */
+#sidenav{width:var(--nav);background:var(--sb);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.nav-logo{padding:13px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px}
+.nav-logo-emoji{font-size:18px}
+#branch-badge{margin-left:auto;background:rgba(232,93,37,.15);color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:1px 7px;font-size:11px}
+.nav-items{flex:1;padding:6px 8px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.nav-btn{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r);cursor:pointer;border:none;background:none;text-align:left;width:100%;font-family:var(--font);font-size:13px;color:var(--muted);transition:all .15s;position:relative}
+.nav-btn:hover{background:rgba(255,255,255,.06);color:var(--text)}
+.nav-btn.active{background:rgba(232,93,37,.12);color:var(--accent)}
+.nav-icon{font-size:15px;flex-shrink:0;width:18px}
+.nav-divider{height:1px;background:var(--border);margin:5px 0}
+.nav-badge{position:absolute;right:8px;min-width:18px;height:18px;background:var(--red);color:#fff;border-radius:9px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
 
-    /* ── 布局 ────────────────────────────── */
-    #app { display: flex; height: 100vh; overflow: hidden; }
+/* ── CONTENT ── */
+#content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.view{display:none;flex:1;flex-direction:column;overflow:hidden}
+.view.active{display:flex}
 
-    /* 左侧文件树 */
-    #sidebar {
-      width: var(--sidebar-w);
-      background: var(--sidebar-bg);
-      border-right: 1px solid var(--border);
-      display: flex; flex-direction: column;
-      overflow: hidden; flex-shrink: 0;
-    }
-    #sidebar-header {
-      padding: 12px 14px 10px;
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 8px;
-    }
-    #sidebar-header .logo { font-size: 18px; }
-    #sidebar-header .title { font-weight: 600; font-size: 13px; color: var(--text); }
-    #sidebar-header .branch-badge {
-      margin-left: auto; background: var(--accent-light); color: var(--accent);
-      border: 1px solid var(--accent); border-radius: 20px;
-      padding: 1px 8px; font-size: 11px; font-weight: 500;
-    }
+/* ── VIEW HEADER ── */
+.vh{height:48px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:12px;flex-shrink:0}
+.vh-title{font-size:15px;font-weight:700}
+.vh-sub{font-size:12px;color:var(--muted)}
+.vh-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+.view-body{flex:1;overflow-y:auto;padding:20px}
+.view-body::-webkit-scrollbar{width:6px}
+.view-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 
-    #file-tree { flex: 1; overflow-y: auto; padding: 6px 0; }
-    #file-tree::-webkit-scrollbar { width: 4px; }
-    #file-tree::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);border:1px solid var(--border);font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--text);font-family:var(--font);transition:all .15s;white-space:nowrap}
+.btn:hover{background:rgba(255,255,255,.07)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover:not(:disabled){background:#c94e1e}
+.btn-danger{color:var(--red);border-color:rgba(248,81,73,.4)}
+.btn-danger:hover{background:rgba(248,81,73,.1)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-xs{padding:2px 7px;font-size:11px}
+.btn-full{width:100%;justify-content:center}
 
-    .tree-item {
-      display: flex; align-items: center; gap: 6px;
-      padding: 4px 8px 4px 0; cursor: pointer; user-select: none;
-      border-radius: var(--radius); margin: 1px 4px;
-      transition: background 0.1s;
-    }
-    .tree-item:hover { background: rgba(255,255,255,0.05); }
-    .tree-item.active { background: var(--accent-light); }
-    .tree-item .icon { font-size: 13px; flex-shrink: 0; }
-    .tree-item .name { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-    .tree-item .words { font-size: 11px; color: var(--muted); flex-shrink: 0; }
-    .tree-dir > .tree-item .name { color: var(--muted); font-weight: 500; }
-    .tree-dir-children { display: none; }
-    .tree-dir.open > .tree-dir-children { display: block; }
+/* ── FORM ELEMENTS ── */
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg.full{grid-column:1/-1}
+.fl{font-size:12px;color:var(--muted);font-weight:500}
+.fi,.fs,.fta{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:var(--r);padding:7px 10px;font-size:13px;font-family:var(--font);outline:none;transition:border-color .2s;width:100%}
+.fta{resize:vertical;min-height:72px;line-height:1.65}
+.fta.tall{min-height:110px}
+.fta.xtall{min-height:150px}
+.fi:focus,.fs:focus,.fta:focus{border-color:var(--accent)}
+.fi::placeholder,.fta::placeholder{color:var(--ph)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
-    #sidebar-actions {
-      padding: 10px 8px;
-      border-top: 1px solid var(--border);
-      display: flex; flex-direction: column; gap: 6px;
-    }
+/* ── FILTER TABS ── */
+.ftabs{display:flex;gap:6px}
+.ftab{padding:4px 11px;border-radius:20px;border:1px solid var(--border);font-size:12px;cursor:pointer;background:transparent;color:var(--muted);font-family:var(--font);transition:all .15s}
+.ftab:hover{background:rgba(255,255,255,.06);color:var(--text)}
+.ftab.active{background:rgba(232,93,37,.15);border-color:var(--accent);color:var(--accent)}
 
-    /* 主编辑区 */
-    #main {
-      flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;
-    }
+/* ── TAGS / BADGES ── */
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.role-主角{background:rgba(232,93,37,.15);color:var(--accent);border:1px solid rgba(232,93,37,.4)}
+.role-配角{background:rgba(88,166,255,.15);color:var(--blue);border:1px solid rgba(88,166,255,.4)}
+.role-反派{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.4)}
+.role-路人{background:rgba(125,133,144,.15);color:var(--muted);border:1px solid var(--border)}
+.status-待写{background:rgba(125,133,144,.15);color:var(--muted)}
+.status-草稿{background:rgba(210,153,34,.15);color:var(--yellow)}
+.status-完稿{background:rgba(63,185,80,.15);color:var(--green)}
+.fsw-伏笔{background:rgba(188,140,255,.15);color:var(--purple)}
+.fsw-悬疑{background:rgba(248,81,73,.15);color:var(--red)}
+.fsw-彩蛋{background:rgba(63,185,80,.15);color:var(--green)}
+.fsw-暗线{background:rgba(210,153,34,.15);color:var(--yellow)}
+.fsw-st-已埋{background:rgba(210,153,34,.15);color:var(--yellow)}
+.fsw-st-部分回收{background:rgba(88,166,255,.15);color:var(--blue)}
+.fsw-st-已回收{background:rgba(63,185,80,.15);color:var(--green)}
+.purp-推进{background:rgba(88,166,255,.12);color:var(--blue)}
+.purp-爽点{background:rgba(232,93,37,.12);color:var(--accent)}
+.purp-伏笔{background:rgba(188,140,255,.12);color:var(--purple)}
+.purp-转折{background:rgba(210,153,34,.12);color:var(--yellow)}
+.purp-高潮{background:rgba(248,81,73,.12);color:var(--red)}
+.purp-过渡{background:rgba(125,133,144,.12);color:var(--muted)}
 
-    #toolbar {
-      height: var(--toolbar-h);
-      background: var(--panel-bg);
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; padding: 0 16px; gap: 10px;
-      flex-shrink: 0;
-    }
-    #file-path { font-size: 12px; color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #save-status { font-size: 12px; padding: 2px 10px; border-radius: 20px; transition: all 0.3s; }
-    #save-status.saved { color: var(--green); background: rgba(63,185,80,0.1); }
-    #save-status.unsaved { color: var(--yellow); background: rgba(210,153,34,0.1); }
-    #save-status.saving { color: var(--blue); background: rgba(88,166,255,0.1); }
+/* ── DASHBOARD ── */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.stat-num{font-size:30px;font-weight:700;font-family:var(--mono);margin:4px 0 2px}
+.stat-sub{font-size:11px;color:var(--muted)}
+.pbar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:8px}
+.pfill{height:100%;border-radius:2px;transition:width .6s}
+.dash-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px}
+.card-title{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
 
-    #editor-container { flex: 1; display: flex; overflow: hidden; }
+/* ── CHARACTER CARDS ── */
+.char-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.char-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;cursor:pointer;transition:all .15s}
+.char-card:hover{border-color:var(--blue);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.char-name{font-size:16px;font-weight:700;margin:6px 0 3px}
+.char-tagline{font-size:12px;color:var(--muted);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.char-detail{font-size:12px;color:var(--muted);line-height:1.65;margin-top:6px}
+.char-detail div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-    #editor-pane, #preview-pane {
-      flex: 1; overflow: hidden; display: flex; flex-direction: column;
-    }
+/* ── OUTLINE FORM ── */
+.outline-wrap{max-width:820px}
+.ol-section{margin-bottom:28px}
+.ol-section-title{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid rgba(232,93,37,.3);padding-bottom:6px;margin-bottom:14px}
 
-    #editor {
-      flex: 1; resize: none; outline: none;
-      background: var(--bg); color: var(--text);
-      border: none; padding: 24px 32px;
-      font-family: var(--font-mono); font-size: 15px; line-height: 1.8;
-      tab-size: 2;
-    }
-    #editor::placeholder { color: var(--muted); }
-    #editor::-webkit-scrollbar { width: 6px; }
-    #editor::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+/* ── TABLES ── */
+.tbl-wrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{background:var(--card);color:var(--muted);padding:9px 10px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;position:sticky;top:0;z-index:1}
+.tbl td{padding:8px 10px;border-bottom:1px solid rgba(48,54,61,.5);vertical-align:top}
+.tbl tr:hover td{background:rgba(255,255,255,.025)}
+.tbl tr.done td{opacity:.65}
+.cell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;display:block}
+.cell-sm{font-size:12px;color:var(--muted)}
+.imp-s{color:var(--yellow)}
+.ch-num{font-family:var(--mono);font-weight:600;color:var(--muted)}
 
-    #preview-pane {
-      border-left: 1px solid var(--border);
-      background: var(--panel-bg);
-    }
-    #preview-header {
-      padding: 8px 16px; border-bottom: 1px solid var(--border);
-      font-size: 12px; color: var(--muted); font-weight: 500;
-      display: flex; align-items: center; gap: 6px;
-    }
-    #preview {
-      flex: 1; overflow-y: auto; padding: 24px 32px;
-      line-height: 1.8;
-    }
-    #preview::-webkit-scrollbar { width: 6px; }
-    #preview::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+/* ── EDITOR ── */
+#view-editor{flex-direction:row}
+#ed-sidebar{width:220px;background:var(--sb);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+#ed-sb-hd{padding:10px 12px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);display:flex;align-items:center}
+#file-tree{flex:1;overflow-y:auto;padding:4px 0}
+#file-tree::-webkit-scrollbar{width:4px}
+#file-tree::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.t-item{display:flex;align-items:center;gap:6px;padding:4px 8px;cursor:pointer;border-radius:4px;margin:1px 4px;transition:background .1s;font-size:12px}
+.t-item:hover{background:rgba(255,255,255,.05)}
+.t-item.active{background:rgba(232,93,37,.12);color:var(--accent)}
+.t-dir{display:flex;align-items:center;gap:6px;padding:4px 8px;cursor:pointer;border-radius:4px;margin:1px 4px;font-size:11px;font-weight:600;color:var(--muted)}
+.t-dir:hover{background:rgba(255,255,255,.04)}
+.t-words{margin-left:auto;font-size:11px;color:var(--muted)}
+.t-children{display:none}
+.t-dir-wrap.open>.t-children{display:block}
+#ed-sb-bot{padding:8px;border-top:1px solid var(--border)}
+#ed-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#ed-bar{height:40px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0}
+#ed-path{font-size:12px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#save-status{font-size:11px;padding:2px 8px;border-radius:20px}
+#save-status.saved{background:rgba(63,185,80,.1);color:var(--green)}
+#save-status.unsaved{background:rgba(210,153,34,.1);color:var(--yellow)}
+#save-status.saving{background:rgba(88,166,255,.1);color:var(--blue)}
+#ed-area{display:flex;flex:1;overflow:hidden}
+#editor{flex:1;resize:none;outline:none;border:none;background:var(--bg);color:var(--text);padding:24px 32px;font-family:var(--mono);font-size:15px;line-height:1.85;overflow-y:auto;display:none}
+#editor::-webkit-scrollbar{width:6px}
+#editor::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+#preview-pane{flex:1;border-left:1px solid var(--border);background:var(--card);display:none;flex-direction:column}
+#preview-pane.show{display:flex}
+#preview-content{flex:1;overflow-y:auto;padding:24px 32px;line-height:1.8}
+#preview-content::-webkit-scrollbar{width:6px}
+#preview-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+#preview-content h1{font-size:20px;border-bottom:1px solid var(--border);padding-bottom:8px;margin:16px 0 8px}
+#preview-content h2{font-size:16px;margin:14px 0 6px;color:var(--blue)}
+#preview-content h3{font-size:14px;margin:12px 0 5px;color:var(--purple)}
+#preview-content p{margin:6px 0}
+#preview-content code{background:rgba(255,255,255,.09);padding:2px 5px;border-radius:3px;font-family:var(--mono);font-size:13px}
+#preview-content pre{background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin:10px 0;overflow-x:auto}
+#preview-content pre code{background:none;padding:0}
+#preview-content blockquote{border-left:3px solid var(--accent);padding-left:12px;color:var(--muted);margin:8px 0}
+#preview-content table{border-collapse:collapse;width:100%;font-size:13px;margin:8px 0}
+#preview-content th,#preview-content td{border:1px solid var(--border);padding:6px 10px}
+#preview-content th{background:var(--card)}
+#preview-content ul,#preview-content ol{padding-left:20px;margin:6px 0}
+#preview-content li{margin:3px 0}
+#preview-content hr{border:none;border-top:1px solid var(--border);margin:16px 0}
+#preview-content strong{font-weight:600}
+#ed-welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted)}
+#ed-welcome .big{font-size:40px}
+#ed-welcome h2{font-size:15px;color:var(--text)}
 
-    /* Markdown 预览样式 */
-    #preview h1, #preview h2, #preview h3 { margin: 16px 0 8px; line-height: 1.4; }
-    #preview h1 { font-size: 20px; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-    #preview h2 { font-size: 17px; color: var(--text); }
-    #preview h3 { font-size: 15px; color: var(--blue); }
-    #preview p { margin: 8px 0; }
-    #preview table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13px; }
-    #preview th, #preview td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
-    #preview th { background: var(--panel-bg); color: var(--muted); font-weight: 500; }
-    #preview code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 13px; }
-    #preview pre { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin: 10px 0; overflow-x: auto; }
-    #preview pre code { background: none; padding: 0; }
-    #preview blockquote { border-left: 3px solid var(--accent); padding-left: 12px; color: var(--muted); margin: 8px 0; }
-    #preview ul, #preview ol { padding-left: 20px; margin: 6px 0; }
-    #preview li { margin: 3px 0; }
-    #preview a { color: var(--blue); text-decoration: none; }
-    #preview hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
-    #preview strong { color: var(--text); font-weight: 600; }
+/* ── GIT DRAWER ── */
+#git-drawer{position:fixed;top:0;right:-340px;width:320px;height:100vh;background:var(--sb);border-left:1px solid var(--border);z-index:100;transition:right .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+#git-drawer.open{right:0}
+#git-hd{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
+#git-body{flex:1;overflow-y:auto}
+#git-body::-webkit-scrollbar{width:4px}
+#git-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.git-sec{padding:12px 16px;border-bottom:1px solid var(--border)}
+.git-sec-title{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+#commit-msg{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:var(--r);padding:7px 10px;font-size:13px;font-family:var(--font);resize:vertical;min-height:58px;outline:none}
+#commit-msg:focus{border-color:var(--accent)}
+.cf{display:flex;align-items:center;gap:6px;padding:2px 0;font-size:12px}
+.fb{width:16px;height:16px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.fb-M{background:rgba(210,153,34,.2);color:var(--yellow)}
+.fb-A{background:rgba(63,185,80,.2);color:var(--green)}
+.fb-D{background:rgba(248,81,73,.2);color:var(--red)}
+.fb-q{background:rgba(88,166,255,.15);color:var(--blue)}
+.cfname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.ci{padding:4px 0;border-bottom:1px solid rgba(48,54,61,.4)}
+.ci:last-child{border-bottom:none}
+.ci-hash{font-size:11px;color:var(--blue);font-family:var(--mono)}
+.ci-msg{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#git-overlay{display:none;position:fixed;inset:0;z-index:99}
+#git-drawer.open~#git-overlay{display:block}
 
-    /* 右侧 Git 面板 */
-    #git-panel {
-      width: var(--git-w);
-      background: var(--sidebar-bg);
-      border-left: 1px solid var(--border);
-      display: flex; flex-direction: column;
-      overflow: hidden; flex-shrink: 0;
-    }
-    #git-panel-header {
-      padding: 12px 14px 10px;
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 8px;
-      font-weight: 600; font-size: 13px;
-    }
+/* ── MODAL ── */
+#modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:200}
+#modal-overlay.show{display:flex}
+#modal-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:22px 26px;width:580px;max-width:95vw;max-height:86vh;overflow-y:auto}
+#modal-box::-webkit-scrollbar{width:4px}
+#modal-box::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.m-title{font-size:16px;font-weight:700;margin-bottom:18px}
+.m-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
 
-    .panel-section { padding: 12px 14px; border-bottom: 1px solid var(--border); }
-    .panel-section-title { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+/* ── NEW FILE MODAL ── */
+#nf-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:200}
+#nf-overlay.show{display:flex}
 
-    #commit-msg {
-      width: 100%; background: var(--bg); color: var(--text);
-      border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 8px 10px; font-family: var(--font-ui); font-size: 13px;
-      resize: vertical; min-height: 60px; outline: none;
-      transition: border-color 0.2s;
-    }
-    #commit-msg:focus { border-color: var(--accent); }
-    #commit-msg::placeholder { color: var(--muted); }
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:10px 16px;font-size:13px;z-index:999;transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;max-width:300px}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.success{border-color:var(--green)}
+#toast.error{border-color:var(--red)}
 
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-      padding: 7px 14px; border-radius: var(--radius); border: 1px solid transparent;
-      font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font-ui);
-      transition: all 0.15s; white-space: nowrap;
-    }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .btn-primary:hover:not(:disabled) { background: #d15520; }
-    .btn-secondary { background: transparent; color: var(--text); border-color: var(--border); }
-    .btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.06); }
-    .btn-danger { background: transparent; color: var(--red); border-color: var(--red); }
-    .btn-danger:hover:not(:disabled) { background: rgba(248,81,73,0.1); }
-    .btn-sm { padding: 4px 10px; font-size: 12px; }
-    .btn-full { width: 100%; }
+/* ── EMPTY STATE ── */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--muted);gap:10px;text-align:center}
+.empty .big{font-size:36px}
+.empty h3{font-size:15px;color:var(--text)}
+.empty p{font-size:13px;line-height:1.5}
 
-    .btn-row { display: flex; gap: 6px; }
-
-    .changed-file {
-      display: flex; align-items: center; gap: 6px;
-      padding: 3px 0; font-size: 12px; overflow: hidden;
-    }
-    .changed-file .badge {
-      flex-shrink: 0; width: 16px; height: 16px; border-radius: 3px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 10px; font-weight: 700;
-    }
-    .badge-M { background: rgba(210,153,34,0.2); color: var(--yellow); }
-    .badge-A { background: rgba(63,185,80,0.2); color: var(--green); }
-    .badge-D { background: rgba(248,81,73,0.2); color: var(--red); }
-    .badge-? { background: rgba(88,166,255,0.15); color: var(--blue); }
-    .changed-file .fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
-
-    .commit-item {
-      padding: 5px 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 12px;
-    }
-    .commit-item:last-child { border-bottom: none; }
-    .commit-hash { color: var(--blue); font-family: var(--font-mono); font-size: 11px; }
-    .commit-msg-text { color: var(--text); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-    /* 统计看板 */
-    #stats-panel {
-      padding: 12px 14px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .stat-card {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 10px 12px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .stat-label { font-size: 12px; color: var(--muted); }
-    .stat-value { font-size: 18px; font-weight: 700; color: var(--accent); font-family: var(--font-mono); }
-    .stat-value.green { color: var(--green); }
-
-    /* Toast 提示 */
-    #toast {
-      position: fixed; bottom: 24px; right: 24px;
-      background: var(--panel-bg); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 10px 16px;
-      font-size: 13px; z-index: 9999;
-      transform: translateY(100px); opacity: 0;
-      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-      max-width: 320px; display: flex; align-items: center; gap: 8px;
-    }
-    #toast.show { transform: translateY(0); opacity: 1; }
-    #toast.success { border-color: var(--green); }
-    #toast.error { border-color: var(--red); }
-    #toast.info { border-color: var(--blue); }
-
-    /* 欢迎屏 */
-    #welcome {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      color: var(--muted); gap: 12px;
-    }
-    #welcome .emoji { font-size: 48px; }
-    #welcome h2 { font-size: 18px; color: var(--text); }
-    #welcome p { font-size: 13px; text-align: center; line-height: 1.6; }
-
-    /* 新建文件对话框 */
-    #modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-      display: none; align-items: center; justify-content: center;
-      z-index: 1000;
-    }
-    #modal-overlay.show { display: flex; }
-    #modal {
-      background: var(--panel-bg); border: 1px solid var(--border);
-      border-radius: 8px; padding: 20px 24px; width: 420px;
-    }
-    #modal h3 { margin-bottom: 14px; font-size: 15px; }
-    .form-group { margin-bottom: 12px; }
-    .form-label { font-size: 12px; color: var(--muted); margin-bottom: 5px; display: block; }
-    .form-input {
-      width: 100%; background: var(--bg); color: var(--text);
-      border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 7px 10px; font-size: 13px; outline: none; font-family: var(--font-mono);
-    }
-    .form-input:focus { border-color: var(--accent); }
-
-    /* 进度条 */
-    .progress-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 6px; }
-    .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.6s ease; }
-
-    /* 分隔线拖拽 */
-    .divider {
-      width: 4px; background: transparent; cursor: col-resize; flex-shrink: 0;
-      transition: background 0.2s;
-    }
-    .divider:hover { background: var(--accent); }
-
-    /* Loading 遮罩 */
-    .loading { opacity: 0.5; pointer-events: none; }
-
-    /* 滚动到 git 历史 */
-    #git-scroll { flex: 1; overflow-y: auto; }
-    #git-scroll::-webkit-scrollbar { width: 4px; }
-    #git-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  </style>
+/* ── RELATION ROWS ── */
+.rel-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.rel-row input{flex:1}
+</style>
 </head>
 <body>
-
 <div id="app">
-  <!-- 左侧文件树 -->
-  <div id="sidebar">
-    <div id="sidebar-header">
-      <span class="logo">📚</span>
-      <span class="title">小说工作台</span>
-      <span class="branch-badge" id="branch-name">main</span>
-    </div>
-    <div id="file-tree">
-      <div style="padding:20px;color:var(--muted);font-size:13px;text-align:center;">加载中…</div>
-    </div>
-    <div id="sidebar-actions">
-      <button class="btn btn-secondary btn-sm btn-full" onclick="showNewFileModal()">＋ 新建文件</button>
-      <button class="btn btn-secondary btn-sm btn-full" onclick="refreshAll()">↻ 刷新</button>
+
+<!-- ════ SIDEBAR ════ -->
+<nav id="sidenav">
+  <div class="nav-logo">
+    <span class="nav-logo-emoji">📚</span>小说工作台
+    <span id="branch-badge">main</span>
+  </div>
+  <div class="nav-items">
+    <button class="nav-btn active" data-v="dashboard" onclick="go('dashboard')"><span class="nav-icon">🏠</span>仪表板</button>
+    <button class="nav-btn" data-v="editor" onclick="go('editor')"><span class="nav-icon">✍️</span>写作</button>
+    <div class="nav-divider"></div>
+    <div style="padding:4px 10px;font-size:10px;color:var(--ph);font-weight:700;letter-spacing:.06em;text-transform:uppercase">故事圣经</div>
+    <button class="nav-btn" data-v="characters" onclick="go('characters')"><span class="nav-icon">👥</span>人物库</button>
+    <button class="nav-btn" data-v="outline" onclick="go('outline')"><span class="nav-icon">📋</span>故事架构</button>
+    <button class="nav-btn" data-v="chapters" onclick="go('chapters')"><span class="nav-icon">📖</span>章节逻辑</button>
+    <button class="nav-btn" data-v="foreshadow" onclick="go('foreshadow')">
+      <span class="nav-icon">🎭</span>伏笔悬疑
+      <span class="nav-badge" id="fsw-badge" style="display:none">0</span>
+    </button>
+    <div class="nav-divider"></div>
+    <button class="nav-btn" onclick="toggleGit()"><span class="nav-icon">🔀</span>Git 版本</button>
+  </div>
+</nav>
+
+<!-- ════ CONTENT ════ -->
+<div id="content">
+
+<!-- ── 仪表板 ── -->
+<div id="view-dashboard" class="view active">
+  <div class="vh">
+    <span class="vh-title">🏠 仪表板</span>
+    <span class="vh-sub">总览</span>
+    <div class="vh-actions">
+      <button class="btn btn-sm" onclick="refreshAll()">↻ 刷新</button>
+      <button class="btn btn-primary btn-sm" onclick="toggleGit()">🔀 Git</button>
     </div>
   </div>
+  <div class="view-body">
+    <div class="dash-grid">
+      <div class="stat-card">
+        <div style="font-size:12px;color:var(--muted)">📝 总字数</div>
+        <div class="stat-num" id="ds-words" style="color:var(--accent)">—</div>
+        <div class="pbar"><div class="pfill" id="ds-bar" style="width:0%;background:var(--accent)"></div></div>
+        <div class="stat-sub" id="ds-bar-txt"></div>
+      </div>
+      <div class="stat-card">
+        <div style="font-size:12px;color:var(--muted)">📖 已写章节</div>
+        <div class="stat-num" id="ds-chs" style="color:var(--green)">—</div>
+        <div class="stat-sub" id="ds-chs-sub"></div>
+      </div>
+      <div class="stat-card">
+        <div style="font-size:12px;color:var(--muted)">👥 人物数量</div>
+        <div class="stat-num" id="ds-chars" style="color:var(--blue)">—</div>
+        <div class="stat-sub" id="ds-chars-sub"></div>
+      </div>
+      <div class="stat-card">
+        <div style="font-size:12px;color:var(--muted)">🎭 未回收伏笔</div>
+        <div class="stat-num" id="ds-fsw" style="color:var(--purple)">—</div>
+        <div class="stat-sub" id="ds-fsw-sub"></div>
+      </div>
+    </div>
+    <div class="dash-2col">
+      <div>
+        <div class="card-title">🕒 最近提交</div>
+        <div class="card" id="dash-commits" style="padding:12px 14px"><div style="color:var(--muted);font-size:13px">加载中…</div></div>
+      </div>
+      <div>
+        <div class="card-title">⚡ 快速操作</div>
+        <div class="card" style="display:flex;flex-direction:column;gap:7px">
+          <button class="btn btn-full" onclick="go('editor')">✍️ 打开写作界面</button>
+          <button class="btn btn-full" onclick="go('characters');setTimeout(openCharModal,80)">👤 新增人物</button>
+          <button class="btn btn-full" onclick="go('chapters');setTimeout(openChModal,80)">📖 新增章节规划</button>
+          <button class="btn btn-full" onclick="go('foreshadow');setTimeout(openFswModal,80)">🎭 记录伏笔</button>
+          <button class="btn btn-full" onclick="go('outline')">📋 编辑故事架构</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-  <!-- 主编辑区 -->
-  <div id="main">
-    <div id="toolbar">
-      <span id="file-path" style="color:var(--muted)">← 从左侧选择文件开始写作</span>
+<!-- ── 写作编辑器 ── -->
+<div id="view-editor" class="view">
+  <div id="ed-sidebar">
+    <div id="ed-sb-hd">📁 文件 <button class="btn btn-xs" style="margin-left:auto" onclick="showNF()">＋</button></div>
+    <div id="file-tree"><div style="padding:16px;color:var(--muted);font-size:12px">加载中…</div></div>
+    <div id="ed-sb-bot"><button class="btn btn-sm btn-full" onclick="showNF()">＋ 新建文件</button></div>
+  </div>
+  <div id="ed-main">
+    <div id="ed-bar">
+      <span id="ed-path" style="color:var(--muted)">← 选择文件开始写作</span>
       <span id="word-count" style="font-size:12px;color:var(--muted)"></span>
       <span id="save-status" class="saved" style="display:none">● 已保存</span>
-      <button class="btn btn-secondary btn-sm" onclick="saveFile()" id="save-btn" style="display:none">保存</button>
-      <button class="btn btn-secondary btn-sm" onclick="togglePreview()" id="preview-btn" style="display:none">预览</button>
+      <button class="btn btn-sm" onclick="saveFile()" id="save-btn" style="display:none">保存</button>
+      <button class="btn btn-sm" onclick="togglePreview()" id="preview-btn" style="display:none">预览</button>
     </div>
-    <div id="editor-container">
-      <div id="welcome">
-        <div class="emoji">✍️</div>
-        <h2>开始你的创作</h2>
-        <p>从左侧文件树选择一个文件<br>或点击「新建文件」开始</p>
-      </div>
-      <div id="editor-pane" style="display:none">
-        <textarea id="editor" placeholder="开始写作…" spellcheck="false"></textarea>
-      </div>
-      <div id="preview-pane" style="display:none">
-        <div id="preview-header">👁 预览</div>
-        <div id="preview"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 右侧 Git + 统计面板 -->
-  <div id="git-panel">
-    <div id="git-panel-header">
-      <span>🔀</span>
-      <span>版本 & 进度</span>
-    </div>
-    <div id="git-scroll">
-      <!-- 统计看板 -->
-      <div class="panel-section">
-        <div class="panel-section-title">📊 写作进度</div>
-        <div id="stats-panel">
-          <div class="stat-card">
-            <span class="stat-label">📝 总字数</span>
-            <span class="stat-value" id="stat-words">-</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">📖 已写章节</span>
-            <span class="stat-value green" id="stat-chapters">-</span>
-          </div>
-          <div style="font-size:11px;color:var(--muted)">目标：100万字</div>
-          <div class="progress-bar">
-            <div class="progress-fill" id="stat-progress" style="width:0%"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Commit -->
-      <div class="panel-section">
-        <div class="panel-section-title">💬 提交记录</div>
-        <textarea id="commit-msg" placeholder="feat: 完成第X章
-update: 修改大纲
-note: 添加人物设定"></textarea>
-        <div class="btn-row" style="margin-top:8px">
-          <button class="btn btn-primary btn-sm" style="flex:1" onclick="doCommit(false)">
-            ✓ Commit
-          </button>
-          <button class="btn btn-secondary btn-sm" style="flex:1" onclick="doCommit(true)">
-            ↑ Commit+Push
-          </button>
-        </div>
-      </div>
-
-      <!-- 变更文件 -->
-      <div class="panel-section">
-        <div class="panel-section-title">📁 变更文件 <span id="changed-count" style="color:var(--accent)"></span></div>
-        <div id="changed-files">
-          <div style="color:var(--muted);font-size:12px">无变更</div>
-        </div>
-      </div>
-
-      <!-- Push单独 -->
-      <div class="panel-section">
-        <button class="btn btn-secondary btn-sm btn-full" onclick="doPush()">⬆ 单独 Push 到 GitHub</button>
-        <div style="margin-top:6px;font-size:11px;color:var(--muted)" id="remote-url"></div>
-      </div>
-
-      <!-- Commit 历史 -->
-      <div class="panel-section">
-        <div class="panel-section-title">🕒 提交历史</div>
-        <div id="commit-history">
-          <div style="color:var(--muted);font-size:12px">加载中…</div>
-        </div>
-      </div>
+    <div id="ed-area">
+      <div id="ed-welcome"><div class="big">✍️</div><h2>选择文件开始写作</h2><p style="font-size:13px">或点击左下「+ 新建文件」</p></div>
+      <textarea id="editor" spellcheck="false" placeholder="开始写作…"></textarea>
+      <div id="preview-pane"><div style="padding:8px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted)">👁 预览</div><div id="preview-content"></div></div>
     </div>
   </div>
 </div>
 
-<!-- Toast -->
-<div id="toast"></div>
-
-<!-- 新建文件 Modal -->
-<div id="modal-overlay" onclick="closeModal(event)">
-  <div id="modal">
-    <h3>📄 新建文件</h3>
-    <div class="form-group">
-      <label class="form-label">路径（相对项目根目录）</label>
-      <input class="form-input" id="new-file-path" placeholder="正文/卷一/第002章.md" />
+<!-- ── 人物库 ── -->
+<div id="view-characters" class="view">
+  <div class="vh">
+    <span class="vh-title">👥 人物库</span>
+    <span class="vh-sub" id="char-sub"></span>
+    <div class="vh-actions">
+      <div class="ftabs" id="char-ftabs">
+        <button class="ftab active" data-r="all" onclick="charFilter('all')">全部</button>
+        <button class="ftab" data-r="主角" onclick="charFilter('主角')">主角</button>
+        <button class="ftab" data-r="配角" onclick="charFilter('配角')">配角</button>
+        <button class="ftab" data-r="反派" onclick="charFilter('反派')">反派</button>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openCharModal()">＋ 添加人物</button>
     </div>
-    <div class="form-group">
-      <label class="form-label">快速模板</label>
+  </div>
+  <div class="view-body">
+    <div class="char-grid" id="char-grid"><div style="color:var(--muted)">加载中…</div></div>
+  </div>
+</div>
+
+<!-- ── 故事架构 ── -->
+<div id="view-outline" class="view">
+  <div class="vh">
+    <span class="vh-title">📋 故事架构</span>
+    <span class="vh-sub">Story Bible · 自动保存</span>
+    <div class="vh-actions"><span id="ol-saved" style="font-size:12px;color:var(--green)">✓ 已保存</span></div>
+  </div>
+  <div class="view-body">
+    <div class="outline-wrap" id="outline-form"><div style="color:var(--muted)">加载中…</div></div>
+  </div>
+</div>
+
+<!-- ── 章节逻辑 ── -->
+<div id="view-chapters" class="view">
+  <div class="vh">
+    <span class="vh-title">📖 章节逻辑</span>
+    <span class="vh-sub" id="ch-sub"></span>
+    <div class="vh-actions">
+      <div class="ftabs" id="ch-ftabs">
+        <button class="ftab active" data-s="all" onclick="chFilter('all')">全部</button>
+        <button class="ftab" data-s="待写" onclick="chFilter('待写')">待写</button>
+        <button class="ftab" data-s="草稿" onclick="chFilter('草稿')">草稿</button>
+        <button class="ftab" data-s="完稿" onclick="chFilter('完稿')">完稿</button>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openChModal()">＋ 添加章节</button>
+    </div>
+  </div>
+  <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+    <div class="tbl-wrap" style="flex:1;overflow-y:auto">
+      <table class="tbl">
+        <thead><tr>
+          <th style="width:65px">章节</th>
+          <th style="width:110px">标题</th>
+          <th style="width:200px">主要事件</th>
+          <th style="width:70px">章节目的</th>
+          <th style="width:170px">结尾钩子</th>
+          <th style="width:60px">字数</th>
+          <th style="width:65px">状态</th>
+          <th style="width:80px">操作</th>
+        </tr></thead>
+        <tbody id="ch-tbody"><tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">加载中…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── 伏笔悬疑 ── -->
+<div id="view-foreshadow" class="view">
+  <div class="vh">
+    <span class="vh-title">🎭 伏笔悬疑</span>
+    <span class="vh-sub" id="fsw-sub"></span>
+    <div class="vh-actions">
+      <div class="ftabs" id="fsw-ftabs">
+        <button class="ftab active" data-s="all" onclick="fswFilter('all')">全部</button>
+        <button class="ftab" data-s="已埋" onclick="fswFilter('已埋')">未回收</button>
+        <button class="ftab" data-s="部分回收" onclick="fswFilter('部分回收')">部分回收</button>
+        <button class="ftab" data-s="已回收" onclick="fswFilter('已回收')">已回收</button>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openFswModal()">＋ 添加伏笔</button>
+    </div>
+  </div>
+  <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+    <div class="tbl-wrap" style="flex:1;overflow-y:auto">
+      <table class="tbl">
+        <thead><tr>
+          <th style="width:30px">#</th>
+          <th style="width:210px">内容描述</th>
+          <th style="width:65px">类型</th>
+          <th style="width:85px">埋入章节</th>
+          <th style="width:85px">回收章节</th>
+          <th style="width:80px">状态</th>
+          <th style="width:55px">重要度</th>
+          <th style="width:160px">回收方案/备注</th>
+          <th style="width:80px">操作</th>
+        </tr></thead>
+        <tbody id="fsw-tbody"><tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)">加载中…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- #content -->
+
+<!-- ════ GIT DRAWER ════ -->
+<div id="git-drawer">
+  <div id="git-hd">🔀 Git 版本管理 <button class="btn btn-sm" style="margin-left:auto" onclick="toggleGit()">✕</button></div>
+  <div id="git-body">
+    <div class="git-sec">
+      <div class="git-sec-title">📊 写作统计</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:13px">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">总字数</span><b id="g-words">—</b></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">正文章节</span><b id="g-chs">—</b></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">当前分支</span><span id="g-branch" style="color:var(--accent)">main</span></div>
+      </div>
+    </div>
+    <div class="git-sec">
+      <div class="git-sec-title">💬 提交</div>
+      <textarea id="commit-msg" placeholder="feat: 完成第X章&#10;update: 修改人物设定&#10;note: 添加伏笔记录"></textarea>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn btn-primary btn-sm" style="flex:1" onclick="doCommit(false)">✓ Commit</button>
+        <button class="btn btn-sm" style="flex:1" onclick="doCommit(true)">↑ +Push</button>
+      </div>
+    </div>
+    <div class="git-sec">
+      <div class="git-sec-title">📁 变更文件 <span id="g-chg-cnt" style="color:var(--accent)"></span></div>
+      <div id="g-changed"><span style="color:var(--muted);font-size:12px">—</span></div>
+    </div>
+    <div class="git-sec">
+      <button class="btn btn-sm btn-full" onclick="doPush()">⬆ 单独 Push</button>
+      <div id="g-remote" style="font-size:11px;color:var(--muted);margin-top:5px;word-break:break-all"></div>
+    </div>
+    <div class="git-sec">
+      <div class="git-sec-title">🕒 提交历史</div>
+      <div id="g-history"><span style="color:var(--muted);font-size:12px">—</span></div>
+    </div>
+  </div>
+</div>
+<div id="git-overlay" onclick="toggleGit()"></div>
+
+<!-- ════ MODAL ════ -->
+<div id="modal-overlay" onclick="maybeCloseModal(event)">
+  <div id="modal-box">
+    <div class="m-title" id="m-title"></div>
+    <div id="m-body"></div>
+    <div class="m-footer" id="m-footer"></div>
+  </div>
+</div>
+
+<!-- ════ NEW FILE MODAL ════ -->
+<div id="nf-overlay" onclick="maybeCloseNF(event)">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:22px 26px;width:440px;max-width:95vw">
+    <div style="font-size:15px;font-weight:700;margin-bottom:16px">📄 新建文件</div>
+    <div class="fg" style="margin-bottom:12px">
+      <label class="fl">文件路径（相对项目根目录）</label>
+      <input class="fi" id="nf-path" placeholder="正文/卷一/第002章.md">
+    </div>
+    <div class="fg" style="margin-bottom:16px">
+      <label class="fl">快速模板</label>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
-        <button class="btn btn-secondary btn-sm" onclick="useTemplate('chapter')">📖 章节</button>
-        <button class="btn btn-secondary btn-sm" onclick="useTemplate('character')">👤 人物</button>
-        <button class="btn btn-secondary btn-sm" onclick="useTemplate('outline')">📋 大纲</button>
-        <button class="btn btn-secondary btn-sm" onclick="useTemplate('note')">💡 笔记</button>
+        <button class="btn btn-sm" onclick="pickTpl('chapter')">📖 章节正文</button>
+        <button class="btn btn-sm" onclick="pickTpl('character')">👤 人物档案</button>
+        <button class="btn btn-sm" onclick="pickTpl('outline')">📋 章节大纲</button>
+        <button class="btn btn-sm" onclick="pickTpl('note')">💡 灵感笔记</button>
       </div>
     </div>
-    <div class="btn-row" style="margin-top:16px;justify-content:flex-end">
-      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
-      <button class="btn btn-primary" onclick="createNewFile()">创建</button>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeNF()">取消</button>
+      <button class="btn btn-primary" onclick="doCreateFile()">创建</button>
     </div>
   </div>
 </div>
+
+<!-- ════ TOAST ════ -->
+<div id="toast"></div>
 
 <script>
 const API = 'http://localhost:8765/api';
-let currentPath = null;
-let saveTimer = null;
-let previewVisible = false;
-let isDirty = false;
 
-// ── 工具函数 ──────────────────────────────────────────
-function toast(msg, type = 'info') {
-  const el = document.getElementById('toast');
-  el.textContent = { success: '✅ ', error: '❌ ', info: 'ℹ️ ' }[type] + msg;
-  el.className = `show ${type}`;
-  clearTimeout(el._timer);
-  el._timer = setTimeout(() => el.className = '', 3000);
-}
-
-async function api(method, endpoint, body) {
-  try {
-    const opts = { method, headers: { 'Content-Type': 'application/json' } };
-    if (body) opts.body = JSON.stringify(body);
-    const r = await fetch(API + endpoint, opts);
-    if (!r.ok) {
-      const err = await r.json().catch(() => ({ detail: r.statusText }));
-      throw new Error(err.detail || r.statusText);
-    }
-    return r.json();
-  } catch (e) {
-    throw e;
-  }
-}
-
-// ── 文件树 ──────────────────────────────────────────
-const FOLDER_ICONS = {
-  '市场调研': '🔍', '立项': '🎯', '世界观': '🌍', '人物': '👤',
-  '大纲': '📋', '正文': '📖', '笔记': '💡', '进度': '📊',
-  '.workbench': '⚙️',
-};
-const FILE_ICONS = {
-  '.md': '📄',
+// ── STATE ─────────────────────────────────────────────
+const S = {
+  view: 'dashboard',
+  characters: [], outline: {}, chapters: [], foreshadow: [],
+  git: { changed:[], commits:[], branch:'main', remote:'' },
+  stats: { total_words:0, chapters:0 },
+  editor: { path:null, dirty:false, preview:false },
+  charF:'all', chF:'all', fswF:'all',
 };
 
-function getIcon(node) {
-  if (node.type === 'dir') return FOLDER_ICONS[node.name] || '📁';
-  const ext = node.name.slice(node.name.lastIndexOf('.'));
-  return FILE_ICONS[ext] || '📄';
+// ── UTILS ─────────────────────────────────────────────
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7) }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+
+function toast(msg, type='info'){
+  const el=document.getElementById('toast');
+  const ico={success:'✅',error:'❌',info:'ℹ️'};
+  el.textContent=`${ico[type]||''} ${msg}`;
+  el.className=`show ${type}`;
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>el.className='',3000);
 }
 
-function formatWords(n) {
-  if (!n) return '';
-  if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
-  return n + '字';
+async function api(method, path, body){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(body!==undefined) opts.body=JSON.stringify(body);
+  const r=await fetch(API+path,opts);
+  if(!r.ok){ const e=await r.json().catch(()=>({detail:r.statusText})); throw new Error(e.detail||r.statusText); }
+  return r.json();
 }
 
-function buildTreeHTML(node, indent = 0) {
-  if (!node) return '';
-  const pad = indent * 14;
+async function loadData(k){ S[k]=await api('GET',`/data/${k}`); }
+async function saveData(k,d){ S[k]=d; await api('POST',`/data/${k}`,d); }
 
-  if (node.type === 'file') {
-    return `<div class="tree-item" data-path="${node.path}" onclick="openFile('${node.path.replace(/'/g, "\\'")}')" style="padding-left:${8 + pad}px">
-      <span class="icon">${getIcon(node)}</span>
-      <span class="name">${node.name}</span>
-      ${node.words ? `<span class="words">${formatWords(node.words)}</span>` : ''}
-    </div>`;
+// ── NAV ───────────────────────────────────────────────
+function go(name){
+  S.view=name;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn[data-v]').forEach(b=>b.classList.remove('active'));
+  const vEl=document.getElementById(`view-${name}`);
+  if(vEl) vEl.classList.add('active');
+  const nEl=document.querySelector(`.nav-btn[data-v="${name}"]`);
+  if(nEl) nEl.classList.add('active');
+  const loaders={
+    dashboard:renderDashboard, editor:loadTree,
+    characters:renderChars, outline:renderOutline,
+    chapters:renderChapters, foreshadow:renderFsw,
+  };
+  if(loaders[name]) loaders[name]();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────
+function renderDashboard(){
+  const w=S.stats.total_words;
+  document.getElementById('ds-words').textContent=w>=10000?(w/10000).toFixed(1)+'w字':w+'字';
+  const pct=Math.min(100,(w/1000000)*100);
+  document.getElementById('ds-bar').style.width=pct.toFixed(2)+'%';
+  document.getElementById('ds-bar-txt').textContent=`目标100w字，完成${pct.toFixed(1)}%`;
+  document.getElementById('ds-chs').textContent=S.stats.chapters;
+  const planCh=S.chapters.length, doneCh=S.chapters.filter(c=>c.status==='完稿').length;
+  document.getElementById('ds-chs-sub').textContent=planCh?`计划${planCh}章，完稿${doneCh}章`:'暂无章节规划';
+  document.getElementById('ds-chars').textContent=S.characters.length;
+  const roles={};S.characters.forEach(c=>{roles[c.role]=(roles[c.role]||0)+1});
+  document.getElementById('ds-chars-sub').textContent=Object.entries(roles).map(([k,v])=>`${k}×${v}`).join('  ')||'暂无人物';
+  const unsolved=S.foreshadow.filter(f=>f.status!=='已回收').length;
+  document.getElementById('ds-fsw').textContent=unsolved;
+  document.getElementById('ds-fsw-sub').textContent=`共${S.foreshadow.length}条，已回收${S.foreshadow.length-unsolved}条`;
+  const badge=document.getElementById('fsw-badge');
+  badge.textContent=unsolved; badge.style.display=unsolved?'':'none';
+  const el=document.getElementById('dash-commits');
+  el.innerHTML=S.git.commits.length===0
+    ?'<div style="color:var(--muted);font-size:13px">暂无提交记录</div>'
+    :S.git.commits.slice(0,6).map(c=>`<div class="ci"><div class="ci-hash">${c.hash}</div><div class="ci-msg">${esc(c.message)}</div></div>`).join('');
+}
+
+// ── EDITOR ────────────────────────────────────────────
+const FICONS={'市场调研':'🔍','立项':'🎯','世界观':'🌍','人物':'👤','大纲':'📋','正文':'📖','笔记':'💡','进度':'📊'};
+function wfmt(n){ return n>=10000?(n/10000).toFixed(1)+'w':n+'字' }
+
+function buildTree(node,depth=0){
+  if(!node) return '';
+  const pad=depth*14;
+  if(node.type==='file'){
+    const ws=node.words>0?`<span class="t-words">${wfmt(node.words)}</span>`:'';
+    const p=node.path.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="t-item" data-path="${esc(node.path)}" onclick="openFile('${p}')" style="padding-left:${10+pad}px">
+      <span>📄</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(node.name)}</span>${ws}</div>`;
   }
-
-  if (node.type === 'dir') {
-    const isRoot = indent === 0;
-    const childrenHTML = (node.children || []).map(c => buildTreeHTML(c, indent + 1)).join('');
-    if (isRoot) return childrenHTML;
-    return `<div class="tree-dir open">
-      <div class="tree-item" style="padding-left:${8 + pad}px" onclick="toggleDir(this.parentElement)">
-        <span class="icon">${getIcon(node)}</span>
-        <span class="name">${node.name}</span>
+  if(node.type==='dir'){
+    const icon=FICONS[node.name]||'📁';
+    if(depth===0) return (node.children||[]).map(c=>buildTree(c,0)).join('');
+    const ch=(node.children||[]).map(c=>buildTree(c,depth+1)).join('');
+    return `<div class="t-dir-wrap open">
+      <div class="t-dir" style="padding-left:${10+pad}px" onclick="this.parentElement.classList.toggle('open')">
+        <span>${icon}</span><span style="flex:1">${esc(node.name)}</span><span style="font-size:10px">▾</span>
       </div>
-      <div class="tree-dir-children">${childrenHTML}</div>
+      <div class="t-children">${ch}</div>
     </div>`;
   }
   return '';
 }
 
-function toggleDir(el) { el.classList.toggle('open'); }
-
-async function loadTree() {
-  try {
-    const tree = await api('GET', '/tree');
-    document.getElementById('file-tree').innerHTML = buildTreeHTML(tree, 0);
-    if (currentPath) {
-      document.querySelectorAll(`[data-path="${currentPath}"]`).forEach(el => el.classList.add('active'));
+async function loadTree(){
+  try{
+    const t=await api('GET','/tree');
+    document.getElementById('file-tree').innerHTML=buildTree(t);
+    if(S.editor.path){
+      document.querySelectorAll(`[data-path="${S.editor.path}"]`).forEach(el=>el.classList.add('active'));
     }
-  } catch (e) {
-    document.getElementById('file-tree').innerHTML = `<div style="padding:16px;color:var(--red);font-size:12px">加载失败：${e.message}</div>`;
+  }catch(e){
+    document.getElementById('file-tree').innerHTML=`<div style="padding:12px;color:var(--red);font-size:12px">${esc(e.message)}</div>`;
   }
 }
 
-// ── 文件编辑 ──────────────────────────────────────────
-async function openFile(path) {
-  if (isDirty && currentPath) {
-    if (!confirm('当前文件有未保存的更改，是否放弃？')) return;
-  }
-  currentPath = path;
-  isDirty = false;
-
-  document.getElementById('welcome').style.display = 'none';
-  document.getElementById('editor-pane').style.display = 'flex';
-  document.getElementById('save-btn').style.display = '';
-  document.getElementById('preview-btn').style.display = '';
-  document.getElementById('save-status').style.display = '';
-
-  document.querySelectorAll('.tree-item.active').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll(`[data-path="${path}"]`).forEach(el => el.classList.add('active'));
-
-  document.getElementById('file-path').textContent = path;
-  document.getElementById('editor').value = '加载中…';
-  setSaveStatus('saved');
-
-  try {
-    const data = await api('GET', `/file?path=${encodeURIComponent(path)}`);
-    document.getElementById('editor').value = data.content;
-    updateWordCount();
-    if (previewVisible) renderPreview();
-  } catch (e) {
-    toast('读取文件失败：' + e.message, 'error');
-  }
+async function openFile(path){
+  if(S.editor.dirty&&!confirm('有未保存的更改，确定切换？')) return;
+  S.editor.path=path; S.editor.dirty=false;
+  document.getElementById('ed-welcome').style.display='none';
+  document.getElementById('editor').style.display='';
+  document.getElementById('save-btn').style.display='';
+  document.getElementById('preview-btn').style.display='';
+  document.getElementById('save-status').style.display='';
+  document.getElementById('ed-path').textContent=path;
+  setSS('saved');
+  document.querySelectorAll('.t-item.active').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll(`[data-path="${path}"]`).forEach(el=>el.classList.add('active'));
+  try{
+    const d=await api('GET',`/file?path=${encodeURIComponent(path)}`);
+    document.getElementById('editor').value=d.content;
+    updateWC(); if(S.editor.preview) renderPreview();
+  }catch(e){ toast('读取失败: '+e.message,'error'); }
 }
 
-function setSaveStatus(state) {
-  const el = document.getElementById('save-status');
-  el.className = state;
-  el.textContent = { saved: '● 已保存', unsaved: '● 未保存', saving: '● 保存中…' }[state];
+let saveT=null;
+function setSS(s){
+  const el=document.getElementById('save-status');
+  el.className=s; el.textContent={saved:'● 已保存',unsaved:'● 未保存',saving:'● 保存中…'}[s];
 }
-
-document.getElementById('editor').addEventListener('input', () => {
-  isDirty = true;
-  setSaveStatus('unsaved');
-  updateWordCount();
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveFile, 1500); // 1.5s 自动保存
-  if (previewVisible) renderPreview();
+document.getElementById('editor').addEventListener('input',()=>{
+  S.editor.dirty=true; setSS('unsaved'); updateWC();
+  clearTimeout(saveT); saveT=setTimeout(saveFile,1500);
+  if(S.editor.preview) renderPreview();
 });
-
-document.addEventListener('keydown', e => {
-  if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-    e.preventDefault();
-    saveFile();
-  }
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();saveFile();}
+  if(e.key==='Escape'){closeModal();closeNF();}
 });
-
-async function saveFile() {
-  if (!currentPath) return;
-  setSaveStatus('saving');
-  try {
-    await api('POST', '/file', { path: currentPath, content: document.getElementById('editor').value });
-    isDirty = false;
-    setSaveStatus('saved');
-  } catch (e) {
-    toast('保存失败：' + e.message, 'error');
-    setSaveStatus('unsaved');
-  }
+async function saveFile(){
+  if(!S.editor.path) return;
+  setSS('saving');
+  try{
+    await api('POST','/file',{path:S.editor.path,content:document.getElementById('editor').value});
+    S.editor.dirty=false; setSS('saved');
+    if(S.view==='editor') loadTree();
+  }catch(e){ setSS('unsaved'); toast('保存失败','error'); }
+}
+function updateWC(){
+  const t=document.getElementById('editor').value;
+  const cn=(t.match(/[\u4e00-\u9fff]/g)||[]).length;
+  document.getElementById('word-count').textContent=cn+'字';
+}
+function togglePreview(){
+  S.editor.preview=!S.editor.preview;
+  document.getElementById('preview-pane').classList.toggle('show',S.editor.preview);
+  document.getElementById('preview-btn').textContent=S.editor.preview?'关闭预览':'预览';
+  if(S.editor.preview) renderPreview();
+}
+function renderPreview(){ document.getElementById('preview-content').innerHTML=md2html(document.getElementById('editor').value); }
+function md2html(t){
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^# (.+)$/gm,'<h1>$1</h1>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^---$/gm,'<hr>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/`(.+?)`/g,'<code>$1</code>').replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>')
+    .replace(/^[\-\*] (.+)$/gm,'<li>$1</li>').replace(/\n{2,}/g,'</p><p>')
+    .replace(/^(?!<[a-zA-Z\/])(.+)$/gm,m=>`<p>${m}</p>`);
 }
 
-function updateWordCount() {
-  const text = document.getElementById('editor').value;
-  const cn = (text.match(/[\u4e00-\u9fff]/g) || []).length;
-  const all = text.trim().split(/\s+/).filter(Boolean).length;
-  document.getElementById('word-count').textContent = `${cn} 字`;
+// ── NEW FILE ──────────────────────────────────────────
+let nfTpl='chapter';
+function showNF(){ document.getElementById('nf-overlay').classList.add('show'); document.getElementById('nf-path').focus(); }
+function closeNF(){ document.getElementById('nf-overlay').classList.remove('show'); document.getElementById('nf-path').value=''; }
+function maybeCloseNF(e){ if(e.target===document.getElementById('nf-overlay')) closeNF(); }
+function pickTpl(t){
+  nfTpl=t;
+  const sugg={chapter:'正文/卷一/第002章.md',character:'人物/新人物.md',outline:'大纲/新大纲.md',note:'笔记/新笔记.md'};
+  if(!document.getElementById('nf-path').value) document.getElementById('nf-path').value=sugg[t]||'';
+  toast('已选：'+t,'info');
 }
-
-// ── 预览 ──────────────────────────────────────────
-function togglePreview() {
-  previewVisible = !previewVisible;
-  document.getElementById('preview-pane').style.display = previewVisible ? 'flex' : 'none';
-  document.getElementById('preview-btn').textContent = previewVisible ? '关闭预览' : '预览';
-  if (previewVisible) renderPreview();
-}
-
-function renderPreview() {
-  const md = document.getElementById('editor').value;
-  document.getElementById('preview').innerHTML = simpleMarkdown(md);
-}
-
-function simpleMarkdown(md) {
-  return md
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^---$/gm, '<hr>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code>$1</code>')
-    .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
-    .replace(/^\- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>')
-    .replace(/\|(.+)\|/g, (m) => {
-      const cells = m.split('|').filter((c,i,a) => i > 0 && i < a.length-1);
-      return '<tr>' + cells.map(c => `<td>${c.trim()}</td>`).join('') + '</tr>';
-    })
-    .replace(/(<tr>.*<\/tr>)/s, '<table>$1</table>')
-    .replace(/\n{2,}/g, '</p><p>')
-    .replace(/^(?!<[a-z])(.+)$/gm, (m) => m.startsWith('<') ? m : `<p>${m}</p>`);
-}
-
-// ── Git 操作 ──────────────────────────────────────────
-async function loadGitStatus() {
-  try {
-    const data = await api('GET', '/git/status');
-    document.getElementById('branch-name').textContent = data.branch || 'main';
-    document.getElementById('remote-url').textContent = data.remote || '';
-
-    // 变更文件
-    const changed = document.getElementById('changed-files');
-    document.getElementById('changed-count').textContent = data.changed.length ? `(${data.changed.length})` : '';
-    if (data.changed.length === 0) {
-      changed.innerHTML = '<div style="color:var(--muted);font-size:12px">✓ 工作区干净</div>';
-    } else {
-      changed.innerHTML = data.changed.map(f => {
-        const s = f.status || '?';
-        const badgeClass = { M: 'badge-M', A: 'badge-A', D: 'badge-D' }[s] || 'badge-?';
-        const fname = f.file.split('/').pop();
-        return `<div class="changed-file" title="${f.file}">
-          <span class="badge ${badgeClass}">${s}</span>
-          <span class="fname">${fname}</span>
-        </div>`;
-      }).join('');
-    }
-
-    // 提交历史
-    const history = document.getElementById('commit-history');
-    if (data.commits.length === 0) {
-      history.innerHTML = '<div style="color:var(--muted);font-size:12px">暂无提交</div>';
-    } else {
-      history.innerHTML = data.commits.map(c => `
-        <div class="commit-item">
-          <div class="commit-hash">${c.hash}</div>
-          <div class="commit-msg-text">${c.message}</div>
-        </div>`).join('');
-    }
-  } catch (e) {
-    console.warn('Git 状态获取失败', e);
-  }
-}
-
-async function doCommit(push) {
-  const msg = document.getElementById('commit-msg').value.trim();
-  if (!msg) { toast('请输入提交信息', 'error'); return; }
-
-  const btn = push ? event.target : document.querySelector('[onclick="doCommit(false)"]');
-  btn.disabled = true;
-  btn.textContent = push ? '推送中…' : '提交中…';
-
-  try {
-    const data = await api('POST', '/git/commit', { message: msg, push });
-    toast(push ? `✓ Commit + Push 成功` : `✓ Commit 成功`, 'success');
-    document.getElementById('commit-msg').value = '';
-    await loadGitStatus();
-    await loadTree(); // 刷新字数
-  } catch (e) {
-    toast('失败：' + e.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = push ? '↑ Commit+Push' : '✓ Commit';
-  }
-}
-
-async function doPush() {
-  const btn = event.target;
-  btn.disabled = true; btn.textContent = '推送中…';
-  try {
-    const data = await api('POST', '/git/push');
-    toast(data.success ? '✓ Push 成功' : 'Push 失败：' + data.output, data.success ? 'success' : 'error');
-    await loadGitStatus();
-  } catch (e) {
-    toast('Push 失败：' + e.message, 'error');
-  } finally {
-    btn.disabled = false; btn.textContent = '⬆ 单独 Push 到 GitHub';
-  }
-}
-
-// ── 统计 ──────────────────────────────────────────
-async function loadStats() {
-  try {
-    const data = await api('GET', '/stats');
-    document.getElementById('stat-words').textContent = data.total_words >= 10000
-      ? (data.total_words / 10000).toFixed(1) + 'w'
-      : data.total_words.toString();
-    document.getElementById('stat-chapters').textContent = data.chapters;
-    const progress = Math.min(100, (data.total_words / 1000000) * 100).toFixed(2);
-    document.getElementById('stat-progress').style.width = progress + '%';
-  } catch (e) {
-    console.warn('统计失败', e);
-  }
-}
-
-// ── 新建文件 ──────────────────────────────────────────
-const TEMPLATES = {
-  chapter: (path) => {
-    const name = path.split('/').pop().replace('.md', '');
-    return `# ${name}\n\n> **卷**：卷一\n> **字数**：0\n> **状态**：🔄 草稿\n\n---\n\n`;
-  },
-  character: (path) => {
-    const name = path.split('/').pop().replace('.md', '');
-    return `# 👤 ${name}\n\n## 基本信息\n\n| 项目 | 内容 |\n|------|------|\n| 姓名 | |\n| 年龄 | |\n| 外貌 | |\n\n## 性格特征\n\n## 核心动机\n\n`;
-  },
-  outline: (path) => {
-    const name = path.split('/').pop().replace('.md', '');
-    return `# 📋 ${name}\n\n## 核心矛盾\n\n## 章节细纲\n\n| 章节 | 主要事件 | 爽点 | 结尾钩子 |\n|------|---------|------|--------|\n| | | | |\n\n`;
-  },
-  note: (path) => `# 💡 笔记\n\n${new Date().toLocaleDateString('zh-CN')}\n\n---\n\n`,
+document.getElementById('nf-path').addEventListener('keydown',e=>{ if(e.key==='Enter') doCreateFile(); });
+const NF_TPL={
+  chapter:p=>`# ${p.split('/').pop().replace('.md','')}\n\n> **卷**：卷一\n> **状态**：🔄 草稿\n\n---\n\n`,
+  character:p=>`# 👤 ${p.split('/').pop().replace('.md','')}\n\n## 基本信息\n\n## 核心动机\n\n## 成长弧光\n\n`,
+  outline:p=>`# 📋 ${p.split('/').pop().replace('.md','')}\n\n## 核心矛盾\n\n## 章节细纲\n\n| 章节 | 事件 | 爽点 | 钩子 |\n|------|------|------|------|\n\n`,
+  note:p=>`# 💡 ${new Date().toLocaleDateString('zh-CN')}\n\n---\n\n`,
 };
+async function doCreateFile(){
+  const path=document.getElementById('nf-path').value.trim();
+  if(!path){ toast('请输入路径','error'); return; }
+  const content=NF_TPL[nfTpl]?NF_TPL[nfTpl](path):'';
+  try{
+    await api('POST','/file/new',{path,content});
+    toast('✓ 文件已创建','success'); closeNF(); loadTree(); openFile(path);
+    if(S.view!=='editor') go('editor');
+  }catch(e){ toast('创建失败: '+e.message,'error'); }
+}
 
-function showNewFileModal() {
+// ── CHARACTERS ────────────────────────────────────────
+function charFilter(r){
+  S.charF=r;
+  document.querySelectorAll('#char-ftabs .ftab').forEach(b=>b.classList.toggle('active',b.dataset.r===r));
+  renderChars();
+}
+function renderChars(){
+  const list=S.charF==='all'?S.characters:S.characters.filter(c=>c.role===S.charF);
+  document.getElementById('char-sub').textContent=`共 ${S.characters.length} 位`;
+  const g=document.getElementById('char-grid');
+  if(!S.characters.length){
+    g.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="big">👥</div><h3>还没有人物</h3><p>点击「添加人物」创建第一个角色</p></div>`;
+    return;
+  }
+  g.innerHTML=list.map(c=>`
+    <div class="char-card" onclick="openCharModal('${c.id}')">
+      <span class="tag role-${esc(c.role||'路人')}">${esc(c.role||'路人')}</span>
+      <div class="char-name">${esc(c.name||'未命名')}</div>
+      <div class="char-tagline">${esc(c.tagline||'暂无简介')}</div>
+      <div class="char-detail">
+        ${c.motivation?`<div>🎯 ${esc(c.motivation)}</div>`:''}
+        ${c.ability?`<div>⚡ ${esc(c.ability)}</div>`:''}
+        ${c.arc?`<div>📈 ${esc(c.arc)}</div>`:''}
+        ${c.firstChapter?`<div style="margin-top:4px;color:var(--ph)">首登第 ${c.firstChapter} 章</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function openCharModal(id){
+  const c=id?S.characters.find(x=>x.id===id):null;
+  const isNew=!c;
+  document.getElementById('m-title').textContent=isNew?'➕ 添加人物':'✏️ 编辑人物';
+  document.getElementById('m-body').innerHTML=`
+  <div class="fgrid">
+    <div class="fg"><label class="fl">姓名 *</label><input class="fi" id="cf-name" value="${esc(c?.name||'')}" placeholder="角色姓名"></div>
+    <div class="fg"><label class="fl">定位 *</label><select class="fs" id="cf-role">${['主角','配角','反派','路人'].map(r=>`<option value="${r}"${c?.role===r?' selected':''}>${r}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">性别</label><input class="fi" id="cf-gender" value="${esc(c?.gender||'')}" placeholder="男/女/不明"></div>
+    <div class="fg"><label class="fl">年龄</label><input class="fi" id="cf-age" value="${esc(c?.age||'')}" placeholder="18岁 / 不详"></div>
+    <div class="fg full"><label class="fl">一句话简介</label><input class="fi" id="cf-tagline" value="${esc(c?.tagline||'')}" placeholder="用一句话描述这个角色的核心标签"></div>
+    <div class="fg full"><label class="fl">外貌描述</label><input class="fi" id="cf-appear" value="${esc(c?.appearance||'')}" placeholder="外貌特征，保持前后文一致的依据"></div>
+    <div class="fg full"><label class="fl">核心动机 ——他/她为什么这样做？</label><textarea class="fta" id="cf-motiv" placeholder="角色行为的根本驱动力。这个问题的答案越清晰，角色越立体">${esc(c?.motivation||'')}</textarea></div>
+    <div class="fg full"><label class="fl">成长弧光 ——从什么变成什么？</label><textarea class="fta" id="cf-arc" placeholder="角色在故事中的内心成长轨迹，起点→终点">${esc(c?.arc||'')}</textarea></div>
+    <div class="fg full"><label class="fl">特殊能力 / 金手指 / 系统</label><textarea class="fta" id="cf-ability" placeholder="系统、异能、技能；包括限制条件（有限制才有张力）">${esc(c?.ability||'')}</textarea></div>
+    <div class="fg full"><label class="fl">在整个故事中的作用（为什么这个人物必须存在？）</label><textarea class="fta" id="cf-role-story" placeholder="这个角色对主线/主角的功能：推动剧情/提供信息/制造障碍/情感支撑…">${esc(c?.storyRole||'')}</textarea></div>
+    <div class="fg"><label class="fl">首次登场章节</label><input class="fi" type="number" id="cf-first" value="${c?.firstChapter||''}" placeholder="第几章"></div>
+    <div class="fg"><label class="fl">结局</label><input class="fi" id="cf-ending" value="${esc(c?.ending||'')}" placeholder="角色最终结局"></div>
+    <div class="fg full"><label class="fl">关键关系网</label>
+      <div id="cf-rels">${(c?.relations||[]).map((r,i)=>relRow(i,r.name,r.rel)).join('')}</div>
+      <button class="btn btn-sm" style="margin-top:6px" onclick="addRel()">＋ 添加关系</button>
+    </div>
+    <div class="fg full"><label class="fl">备注（写作参考、伏笔、彩蛋等）</label><textarea class="fta" id="cf-notes" placeholder="其他需要记录的信息">${esc(c?.notes||'')}</textarea></div>
+  </div>`;
+  document.getElementById('m-footer').innerHTML=`
+    ${c?`<button class="btn btn-danger btn-sm" onclick="delChar('${c.id}')">删除人物</button>`:''}
+    <button class="btn" onclick="closeModal()">取消</button>
+    <button class="btn btn-primary" onclick="saveChar('${id||''}')">保存</button>`;
   document.getElementById('modal-overlay').classList.add('show');
-  document.getElementById('new-file-path').focus();
 }
 
-function closeModal(e) {
-  if (!e || e.target === document.getElementById('modal-overlay')) {
-    document.getElementById('modal-overlay').classList.remove('show');
+function relRow(idx,name='',rel=''){
+  return `<div class="rel-row" id="rr-${idx}">
+    <input class="fi" id="rn-${idx}" placeholder="人物名" value="${esc(name)}">
+    <input class="fi" id="rrel-${idx}" placeholder="关系（挚友/对手/师徒…）" value="${esc(rel)}">
+    <button class="btn btn-xs btn-danger" onclick="document.getElementById('rr-${idx}').remove()">✕</button>
+  </div>`;
+}
+function addRel(){ const el=document.getElementById('cf-rels'); const i=Date.now(); el.insertAdjacentHTML('beforeend',relRow(i)); }
+
+async function saveChar(id){
+  const name=document.getElementById('cf-name').value.trim();
+  if(!name){ toast('姓名不能为空','error'); return; }
+  const rels=[];
+  document.querySelectorAll('#cf-rels .rel-row').forEach(row=>{
+    const i=row.id.replace('rr-','');
+    const n=document.getElementById(`rn-${i}`)?.value.trim();
+    const r=document.getElementById(`rrel-${i}`)?.value.trim();
+    if(n) rels.push({name:n,rel:r});
+  });
+  const ch={
+    id:id||uid(), name,
+    role:document.getElementById('cf-role').value,
+    gender:document.getElementById('cf-gender').value,
+    age:document.getElementById('cf-age').value,
+    tagline:document.getElementById('cf-tagline').value,
+    appearance:document.getElementById('cf-appear').value,
+    motivation:document.getElementById('cf-motiv').value,
+    arc:document.getElementById('cf-arc').value,
+    ability:document.getElementById('cf-ability').value,
+    storyRole:document.getElementById('cf-role-story').value,
+    firstChapter:parseInt(document.getElementById('cf-first').value)||null,
+    ending:document.getElementById('cf-ending').value,
+    relations:rels,
+    notes:document.getElementById('cf-notes').value,
+  };
+  if(id){ const i=S.characters.findIndex(c=>c.id===id); if(i>=0) S.characters[i]=ch; else S.characters.push(ch); }
+  else S.characters.push(ch);
+  try{ await saveData('characters',S.characters); toast('人物已保存','success'); closeModal(); renderChars(); }
+  catch(e){ toast('保存失败: '+e.message,'error'); }
+}
+async function delChar(id){
+  if(!confirm('确定删除这个人物吗？')) return;
+  S.characters=S.characters.filter(c=>c.id!==id);
+  await saveData('characters',S.characters); toast('已删除','success'); closeModal(); renderChars();
+}
+
+// ── OUTLINE ───────────────────────────────────────────
+const OL_SCHEMA=[
+  {sec:'📖 基本信息',fields:[
+    {id:'title',lb:'书名',ph:'你的书名（暂定）',full:true},
+    {id:'genre',lb:'题材',ph:'都市高武 / 玄幻 / 悬疑…'},
+    {id:'wordTarget',lb:'字数目标',ph:'1000000',type:'number'},
+    {id:'tagline',lb:'一句话简介',ph:'用一句话说清：谁 × 在什么处境 × 做了什么',full:true},
+  ]},
+  {sec:'🎯 核心设计',fields:[
+    {id:'hook',lb:'第一章钩子——前三章如何留住读者？',ph:'具体写出开篇的抓人设计',full:true,ta:true,tall:true},
+    {id:'coreConflict',lb:'主线冲突——整本书最大的矛盾是什么？',ph:'贯穿全书的核心对立',full:true,ta:true},
+    {id:'theme',lb:'主题思想——这本书想表达什么？',ph:'可以是一种情感、一个观点，不必宏大',full:true,ta:true},
+    {id:'protag',lb:'主角最大爽点',ph:'读者跟读的最核心动力',full:true,ta:true},
+  ]},
+  {sec:'📊 三幕结构',fields:[
+    {id:'act1',lb:'第一幕：开局（前10%）——如何建立世界观、人物、第一次危机',ph:'写出这一阶段的关键事件和目标',full:true,ta:true,tall:true},
+    {id:'act2a',lb:'第二幕上：发展（10%-50%）——主角成长，矛盾升级',ph:'',full:true,ta:true,tall:true},
+    {id:'act2b',lb:'第二幕下：至暗（50%-75%）——最低谷，主角从被动变主动',ph:'',full:true,ta:true,tall:true},
+    {id:'act3',lb:'第三幕：高潮结局（75%-100%）——决战与解决',ph:'',full:true,ta:true,tall:true},
+  ]},
+  {sec:'🌍 世界观 & 体系',fields:[
+    {id:'worldview',lb:'世界背景设定',ph:'时代背景、基本规则…',full:true,ta:true,tall:true},
+    {id:'powerSystem',lb:'力量 / 升级体系',ph:'修炼等级、系统规则、能力来源与限制…',full:true,ta:true,tall:true},
+  ]},
+];
+
+let olTimer=null;
+function renderOutline(){
+  const o=S.outline;
+  let h='<div class="outline-wrap">';
+  OL_SCHEMA.forEach(sec=>{
+    h+=`<div class="ol-section"><div class="ol-section-title">${sec.sec}</div><div class="fgrid">`;
+    sec.fields.forEach(f=>{
+      const v=o[f.id]||'';
+      const cls=f.full?'fg full':'fg';
+      let inp;
+      if(f.ta) inp=`<textarea class="fta${f.tall?' tall':''}" id="of-${f.id}" placeholder="${esc(f.ph)}" oninput="schedOl()">${esc(v)}</textarea>`;
+      else if(f.type==='number') inp=`<input class="fi" type="number" id="of-${f.id}" value="${esc(v)}" placeholder="${esc(f.ph)}" oninput="schedOl()">`;
+      else inp=`<input class="fi" id="of-${f.id}" value="${esc(v)}" placeholder="${esc(f.ph)}" oninput="schedOl()">`;
+      h+=`<div class="${cls}"><label class="fl">${f.lb}</label>${inp}</div>`;
+    });
+    h+=`</div></div>`;
+  });
+  h+='</div>';
+  document.getElementById('outline-form').innerHTML=h;
+  document.getElementById('ol-saved').textContent='✓ 已保存';
+}
+function schedOl(){ document.getElementById('ol-saved').textContent='…修改中'; clearTimeout(olTimer); olTimer=setTimeout(doSaveOl,1500); }
+async function doSaveOl(){
+  const o={};
+  OL_SCHEMA.forEach(sec=>sec.fields.forEach(f=>{ const el=document.getElementById(`of-${f.id}`); if(el) o[f.id]=f.type==='number'?parseInt(el.value)||null:el.value; }));
+  try{ await saveData('outline',o); document.getElementById('ol-saved').textContent='✓ 已保存'; }
+  catch(e){ document.getElementById('ol-saved').textContent='❌ 保存失败'; }
+}
+
+// ── CHAPTERS ──────────────────────────────────────────
+function chFilter(s){ S.chF=s; document.querySelectorAll('#ch-ftabs .ftab').forEach(b=>b.classList.toggle('active',b.dataset.s===s)); renderChapters(); }
+
+function renderChapters(){
+  const list=S.chF==='all'?S.chapters:S.chapters.filter(c=>c.status===S.chF);
+  const done=S.chapters.filter(c=>c.status==='完稿').length;
+  document.getElementById('ch-sub').textContent=`共${S.chapters.length}章，完稿${done}章`;
+  const tb=document.getElementById('ch-tbody');
+  if(!S.chapters.length){
+    tb.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="big">📖</div><h3>还没有章节规划</h3><p>点击「添加章节」开始规划故事</p></div></td></tr>`;
+    return;
   }
+  if(!list.length){ tb.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--muted)">该筛选条件下暂无章节</td></tr>`; return; }
+  tb.innerHTML=list.map(c=>`
+    <tr class="${c.status==='完稿'?'done':''}">
+      <td><span class="ch-num">第${c.number||'?'}章</span><br><span style="font-size:11px;color:var(--ph)">${esc(c.volume||'')}</span></td>
+      <td><span class="cell" style="font-weight:500">${esc(c.title||'—')}</span></td>
+      <td><span class="cell cell-sm">${esc(c.events||'—')}</span></td>
+      <td>${c.purpose?`<span class="tag purp-${c.purpose}">${c.purpose}</span>`:'—'}</td>
+      <td><span class="cell cell-sm">${esc(c.hook||'—')}</span></td>
+      <td style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--muted)">${c.wordTarget?(c.wordTarget/1000).toFixed(0)+'k':'—'}</td>
+      <td><span class="tag status-${c.status||'待写'}">${c.status||'待写'}</span></td>
+      <td><div style="display:flex;gap:4px">
+        <button class="btn btn-xs" onclick="openChModal('${c.id}')">编辑</button>
+        <button class="btn btn-xs btn-danger" onclick="delCh('${c.id}')">✕</button>
+      </div></td>
+    </tr>`).join('');
 }
 
-function useTemplate(type) {
-  const path = document.getElementById('new-file-path').value || '新文件.md';
-  document.getElementById('new-file-path').dataset.template = type;
-  if (!document.getElementById('new-file-path').value) {
-    const suggestions = { chapter: '正文/卷一/第002章.md', character: '人物/新人物.md', outline: '大纲/新大纲.md', note: '笔记/新笔记.md' };
-    document.getElementById('new-file-path').value = suggestions[type] || '';
+function openChModal(id){
+  const c=id?S.chapters.find(x=>x.id===id):null;
+  document.getElementById('m-title').textContent=c?'✏️ 编辑章节逻辑':'➕ 添加章节';
+  document.getElementById('m-body').innerHTML=`
+  <div class="fgrid">
+    <div class="fg"><label class="fl">卷</label><input class="fi" id="chf-vol" value="${esc(c?.volume||'卷一')}" placeholder="卷一"></div>
+    <div class="fg"><label class="fl">章节号 *</label><input class="fi" type="number" id="chf-num" value="${c?.number||''}" placeholder="1"></div>
+    <div class="fg full"><label class="fl">章节标题</label><input class="fi" id="chf-title" value="${esc(c?.title||'')}" placeholder="章节标题"></div>
+    <div class="fg full"><label class="fl">主要事件——这章发生了什么？</label><textarea class="fta" id="chf-events" placeholder="简要描述本章核心事件">${esc(c?.events||'')}</textarea></div>
+    <div class="fg full"><label class="fl">章节目的——这章为什么存在？对故事有什么作用？</label>
+      <select class="fs" id="chf-purpose"><option value="">选择目的…</option>${['推进','爽点','伏笔','转折','高潮','过渡'].map(p=>`<option value="${p}"${c?.purpose===p?' selected':''}>${p}</option>`).join('')}</select>
+    </div>
+    <div class="fg full"><label class="fl">结尾钩子——如何让读者不停更？（每章必须有）</label><textarea class="fta" id="chf-hook" placeholder="这章结尾的悬念/爽点/新问题">${esc(c?.hook||'')}</textarea></div>
+    <div class="fg full"><label class="fl">章节逻辑备注（场景、视角、情感节奏等）</label><textarea class="fta" id="chf-logic" placeholder="这章的写作参考：从哪里写到哪里，主角情绪变化，节奏控制…">${esc(c?.logic||'')}</textarea></div>
+    <div class="fg"><label class="fl">目标字数</label><input class="fi" type="number" id="chf-wt" value="${c?.wordTarget||3000}" placeholder="3000"></div>
+    <div class="fg"><label class="fl">状态</label>
+      <select class="fs" id="chf-status">${['待写','草稿','完稿'].map(s=>`<option value="${s}"${(c?.status||'待写')===s?' selected':''}>${s}</option>`).join('')}</select>
+    </div>
+    <div class="fg full"><label class="fl">关联伏笔（本章埋入或回收的伏笔）</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);max-height:100px;overflow-y:auto">
+        ${S.foreshadow.length===0?'<span style="color:var(--muted);font-size:12px">暂无伏笔（先去「伏笔悬疑」添加）</span>':
+          S.foreshadow.map(f=>`<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;white-space:nowrap">
+            <input type="checkbox" id="flnk-${f.id}"${(c?.linkedFsw||[]).includes(f.id)?' checked':''}> ${esc(f.content.slice(0,18))}${f.content.length>18?'…':''}</label>`).join('')}
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('m-footer').innerHTML=`
+    ${c?`<button class="btn btn-danger btn-sm" onclick="delCh('${c.id}')">删除</button>`:''}
+    <button class="btn" onclick="closeModal()">取消</button>
+    <button class="btn btn-primary" onclick="saveCh('${id||''}')">保存</button>`;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+async function saveCh(id){
+  const num=parseInt(document.getElementById('chf-num').value);
+  if(!num){ toast('章节号不能为空','error'); return; }
+  const linkedFsw=[];
+  S.foreshadow.forEach(f=>{ if(document.getElementById(`flnk-${f.id}`)?.checked) linkedFsw.push(f.id); });
+  const ch={
+    id:id||uid(),
+    volume:document.getElementById('chf-vol').value||'卷一',
+    number:num, title:document.getElementById('chf-title').value,
+    events:document.getElementById('chf-events').value,
+    purpose:document.getElementById('chf-purpose').value,
+    hook:document.getElementById('chf-hook').value,
+    logic:document.getElementById('chf-logic').value,
+    wordTarget:parseInt(document.getElementById('chf-wt').value)||3000,
+    status:document.getElementById('chf-status').value,
+    linkedFsw,
+  };
+  if(id){ const i=S.chapters.findIndex(c=>c.id===id); if(i>=0) S.chapters[i]=ch; else S.chapters.push(ch); }
+  else S.chapters.push(ch);
+  S.chapters.sort((a,b)=>(a.number||0)-(b.number||0));
+  try{ await saveData('chapters',S.chapters); toast('章节已保存','success'); closeModal(); renderChapters(); }
+  catch(e){ toast('保存失败: '+e.message,'error'); }
+}
+async function delCh(id){
+  if(!confirm('确定删除这个章节规划吗？')) return;
+  S.chapters=S.chapters.filter(c=>c.id!==id);
+  await saveData('chapters',S.chapters); toast('已删除','success'); closeModal(); renderChapters();
+}
+
+// ── FORESHADOWING ─────────────────────────────────────
+function fswFilter(s){ S.fswF=s; document.querySelectorAll('#fsw-ftabs .ftab').forEach(b=>b.classList.toggle('active',b.dataset.s===s)); renderFsw(); }
+
+function renderFsw(){
+  let list=S.fswF==='all'?S.foreshadow:S.foreshadow.filter(f=>f.status===S.fswF);
+  const unsolved=S.foreshadow.filter(f=>f.status!=='已回收').length;
+  document.getElementById('fsw-sub').textContent=`共${S.foreshadow.length}条，${unsolved}条待回收`;
+  const badge=document.getElementById('fsw-badge');
+  badge.textContent=unsolved; badge.style.display=unsolved?'':'none';
+  const tb=document.getElementById('fsw-tbody');
+  if(!S.foreshadow.length){
+    tb.innerHTML=`<tr><td colspan="9"><div class="empty"><div class="big">🎭</div><h3>还没有伏笔记录</h3><p>点击「添加伏笔」开始追踪你埋下的线索</p></div></td></tr>`;
+    return;
   }
-  toast(`已选择「${type}」模板`, 'info');
+  if(!list.length){ tb.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--muted)">该筛选下暂无记录</td></tr>`; return; }
+  const IMP={'高':'★★★','中':'★★☆','低':'★☆☆'};
+  tb.innerHTML=list.map((f,i)=>`
+    <tr style="${f.status==='已回收'?'opacity:.6':''}">
+      <td style="color:var(--muted);font-family:var(--mono)">${i+1}</td>
+      <td><div style="max-width:195px;line-height:1.5">${esc(f.content||'—')}</div></td>
+      <td><span class="tag fsw-${f.type||'伏笔'}">${f.type||'伏笔'}</span></td>
+      <td style="font-family:var(--mono);font-size:12px">${f.plantChapter?'第'+f.plantChapter+'章':'—'}</td>
+      <td style="font-family:var(--mono);font-size:12px">${f.resolveChapter?'第'+f.resolveChapter+'章':'<span style="color:var(--ph)">待定</span>'}</td>
+      <td><span class="tag fsw-st-${f.status||'已埋'}">${f.status||'已埋'}</span></td>
+      <td><span class="imp-s" title="${f.importance}">${IMP[f.importance]||'—'}</span></td>
+      <td><span class="cell cell-sm" style="max-width:140px">${esc(f.notes||'—')}</span></td>
+      <td><div style="display:flex;gap:4px">
+        <button class="btn btn-xs" onclick="openFswModal('${f.id}')">编辑</button>
+        <button class="btn btn-xs btn-danger" onclick="delFsw('${f.id}')">✕</button>
+      </div></td>
+    </tr>`).join('');
 }
 
-async function createNewFile() {
-  const path = document.getElementById('new-file-path').value.trim();
-  if (!path) { toast('请输入文件路径', 'error'); return; }
-  const tmplKey = document.getElementById('new-file-path').dataset.template;
-  const content = tmplKey && TEMPLATES[tmplKey] ? TEMPLATES[tmplKey](path) : '';
-  try {
-    await api('POST', '/file/new', { path, content });
-    toast('✓ 文件已创建', 'success');
-    closeModal();
-    await loadTree();
-    openFile(path);
-  } catch (e) {
-    toast('创建失败：' + e.message, 'error');
-  }
+function openFswModal(id){
+  const f=id?S.foreshadow.find(x=>x.id===id):null;
+  document.getElementById('m-title').textContent=f?'✏️ 编辑伏笔/悬疑':'➕ 添加伏笔/悬疑';
+  document.getElementById('m-body').innerHTML=`
+  <div class="fgrid">
+    <div class="fg full"><label class="fl">内容描述 *——这条伏笔/悬疑的具体内容</label><textarea class="fta tall" id="ff-content" placeholder="详细描述这条线索的内容，越具体越好，方便日后检索和回收">${esc(f?.content||'')}</textarea></div>
+    <div class="fg"><label class="fl">类型</label><select class="fs" id="ff-type">${['伏笔','悬疑','彩蛋','暗线'].map(t=>`<option value="${t}"${f?.type===t?' selected':''}>${t}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">重要程度</label><select class="fs" id="ff-imp">${['高','中','低'].map(i=>`<option value="${i}"${(f?.importance||'中')===i?' selected':''}>${i}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">埋入章节</label><input class="fi" type="number" id="ff-plant" value="${f?.plantChapter||''}" placeholder="第几章埋入"></div>
+    <div class="fg"><label class="fl">计划回收章节</label><input class="fi" type="number" id="ff-resolve" value="${f?.resolveChapter||''}" placeholder="第几章回收（可留空）"></div>
+    <div class="fg full"><label class="fl">当前状态</label><select class="fs" id="ff-status">${['已埋','部分回收','已回收'].map(s=>`<option value="${s}"${(f?.status||'已埋')===s?' selected':''}>${s}</option>`).join('')}</select></div>
+    <div class="fg full"><label class="fl">回收方案 / 备注——计划如何回收？读者反应是什么？</label><textarea class="fta" id="ff-notes" placeholder="计划中的回收方式，或已埋时的上下文背景">${esc(f?.notes||'')}</textarea></div>
+    <div class="fg full"><label class="fl">关联人物</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${S.characters.length===0?'<span style="color:var(--muted);font-size:12px">暂无人物</span>':
+          S.characters.map(c=>`<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
+            <input type="checkbox" id="fchar-${c.id}"${(f?.linkedChars||[]).includes(c.id)?' checked':''}> ${esc(c.name)}</label>`).join('')}
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('m-footer').innerHTML=`
+    ${f?`<button class="btn btn-danger btn-sm" onclick="delFsw('${f.id}')">删除</button>`:''}
+    <button class="btn" onclick="closeModal()">取消</button>
+    <button class="btn btn-primary" onclick="saveFsw('${id||''}')">保存</button>`;
+  document.getElementById('modal-overlay').classList.add('show');
 }
 
-document.getElementById('new-file-path').addEventListener('keydown', e => {
-  if (e.key === 'Enter') createNewFile();
-  if (e.key === 'Escape') closeModal();
-});
+async function saveFsw(id){
+  const content=document.getElementById('ff-content').value.trim();
+  if(!content){ toast('内容不能为空','error'); return; }
+  const linkedChars=[];
+  S.characters.forEach(c=>{ if(document.getElementById(`fchar-${c.id}`)?.checked) linkedChars.push(c.id); });
+  const fsw={
+    id:id||uid(), content,
+    type:document.getElementById('ff-type').value,
+    importance:document.getElementById('ff-imp').value,
+    plantChapter:parseInt(document.getElementById('ff-plant').value)||null,
+    resolveChapter:parseInt(document.getElementById('ff-resolve').value)||null,
+    status:document.getElementById('ff-status').value,
+    notes:document.getElementById('ff-notes').value,
+    linkedChars,
+  };
+  if(id){ const i=S.foreshadow.findIndex(f=>f.id===id); if(i>=0) S.foreshadow[i]=fsw; else S.foreshadow.push(fsw); }
+  else S.foreshadow.push(fsw);
+  try{ await saveData('foreshadow',S.foreshadow); toast('已保存','success'); closeModal(); renderFsw(); renderDashboard(); }
+  catch(e){ toast('保存失败: '+e.message,'error'); }
+}
+async function delFsw(id){
+  if(!confirm('确定删除这条记录吗？')) return;
+  S.foreshadow=S.foreshadow.filter(f=>f.id!==id);
+  await saveData('foreshadow',S.foreshadow); toast('已删除','success'); closeModal(); renderFsw();
+}
 
-// ── 初始化 ──────────────────────────────────────────
-async function refreshAll() {
-  await Promise.all([loadTree(), loadGitStatus(), loadStats()]);
+// ── GIT ───────────────────────────────────────────────
+let gitOpen=false;
+function toggleGit(){ gitOpen=!gitOpen; document.getElementById('git-drawer').classList.toggle('open',gitOpen); if(gitOpen) loadGit(); }
+
+async function loadGit(){
+  try{
+    const d=await api('GET','/git/status');
+    S.git=d;
+    document.getElementById('branch-badge').textContent=d.branch||'main';
+    document.getElementById('g-branch').textContent=d.branch||'main';
+    document.getElementById('g-remote').textContent=d.remote||'';
+    document.getElementById('g-chg-cnt').textContent=d.changed.length?`(${d.changed.length})`:'';
+    document.getElementById('g-changed').innerHTML=d.changed.length===0
+      ?'<div style="color:var(--muted);font-size:12px">✓ 工作区干净</div>'
+      :d.changed.map(f=>{
+        const s=f.status||'?';
+        const cls={M:'fb-M',A:'fb-A',D:'fb-D'}[s]||'fb-q';
+        return `<div class="cf"><span class="fb ${cls}">${s}</span><span class="cfname" title="${esc(f.file)}">${esc(f.file.split('/').pop())}</span></div>`;
+      }).join('');
+    document.getElementById('g-history').innerHTML=d.commits.length===0
+      ?'<div style="color:var(--muted);font-size:12px">暂无提交</div>'
+      :d.commits.map(c=>`<div class="ci"><div class="ci-hash">${c.hash}</div><div class="ci-msg">${esc(c.message)}</div></div>`).join('');
+  }catch(e){ console.warn('git:',e); }
+}
+
+async function loadStats(){
+  try{
+    S.stats=await api('GET','/stats');
+    document.getElementById('g-words').textContent=S.stats.total_words>=10000?(S.stats.total_words/10000).toFixed(1)+'w字':S.stats.total_words+'字';
+    document.getElementById('g-chs').textContent=S.stats.chapters+'章';
+  }catch(e){}
+}
+
+async function doCommit(push){
+  const msg=document.getElementById('commit-msg').value.trim();
+  if(!msg){ toast('请输入提交信息','error'); return; }
+  try{
+    await api('POST','/git/commit',{message:msg,push});
+    toast(push?'✓ Commit + Push 成功':'✓ Commit 成功','success');
+    document.getElementById('commit-msg').value='';
+    await loadGit(); loadTree();
+  }catch(e){ toast('失败: '+e.message,'error'); }
+}
+async function doPush(){
+  try{ const d=await api('POST','/git/push'); toast(d.success?'✓ Push 成功':'Push 失败: '+d.output,d.success?'success':'error'); loadGit(); }
+  catch(e){ toast('失败: '+e.message,'error'); }
+}
+
+// ── MODAL ─────────────────────────────────────────────
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('show'); }
+function maybeCloseModal(e){ if(e.target===document.getElementById('modal-overlay')) closeModal(); }
+
+// ── INIT ──────────────────────────────────────────────
+async function refreshAll(){
+  await Promise.all([
+    loadData('characters'),loadData('outline'),
+    loadData('chapters'),loadData('foreshadow'),
+    loadGit(),loadStats(),
+  ]);
+  go(S.view);
 }
 
 refreshAll();
-// 每30秒自动刷新 git 状态
-setInterval(loadGitStatus, 30000);
-setInterval(loadStats, 60000);
+setInterval(loadGit,30000);
+setInterval(loadStats,60000);
 </script>
 </body>
 </html>
